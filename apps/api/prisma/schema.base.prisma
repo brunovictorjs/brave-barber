@@ -1,0 +1,461 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Brave Barber — modelo de dados.
+//
+// Este é o arquivo-fonte. Não rode o Prisma direto nele: `scripts/prisma-schema.mjs`
+// gera `prisma/<provedor>/schema.prisma` com o datasource certo (SQLite em
+// desenvolvimento, PostgreSQL/Supabase em produção) e cada provedor guarda as
+// próprias migrações ao lado do seu schema.
+//
+// Regras para manter o schema portátil entre SQLite e Postgres:
+//   • sem `enum` do Prisma — os valores são strings validadas pelo domínio;
+//   • dinheiro sempre em centavos (Int), percentuais em pontos-base (6000 = 60%);
+//   • listas/objetos livres em String com JSON, convertidos nos mapeadores.
+// ─────────────────────────────────────────────────────────────────────────────
+
+//@@DATASOURCE@@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Identidade ──────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  googleId     String?   @unique
+  firstName    String
+  lastName     String    @default("")
+  phone        String?
+  avatarUrl    String?
+  about        String?
+  specialties  String    @default("[]") // JSON: string[]
+  roles        String    @default("CLIENT") // lista separada por vírgula: CLIENT,BARBER,RECEPTIONIST,ADMIN
+  active       Boolean   @default(true)
+  onboardedAt  DateTime?
+  lastAccessAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  staffProfile      StaffProfile?
+  ordersAsCustomer  Order[]           @relation("OrderCustomer")
+  ordersAsBarber    Order[]           @relation("OrderBarber")
+  favorites         Favorite[]        @relation("FavoriteOwner")
+  productReviews    ProductReview[]   @relation("ProductReviewCustomer")
+  favoritedBy       Favorite[]        @relation("FavoriteBarber")
+  notifications     Notification[]
+  reviewsWritten    Review[]          @relation("ReviewCustomer")
+  reviewsReceived   Review[]          @relation("ReviewBarber")
+  serviceSkills     ServiceBarber[]
+  commissionLines   CommissionLine[]
+  legalAcceptances  LegalAcceptance[]
+}
+
+model StaffProfile {
+  userId               String   @id
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline             String   @default("") // "Degradê e navalha"
+  sinceYear            Int?
+  chairLabel           String?
+  serviceCommissionBps Int      @default(5500)
+  productCommissionBps Int      @default(1500)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ── Catálogo ────────────────────────────────────────────────────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  kind      String // SERVICE | PRODUCT
+  icon      String    @default("scissor")
+  position  Int       @default(0)
+  createdAt DateTime  @default(now())
+  services  Service[]
+  products  Product[]
+  commissionRule CommissionCategoryRule?
+}
+
+model Service {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  categoryId       String
+  category         Category @relation(fields: [categoryId], references: [id])
+  priceCents       Int
+  durationMin      Int
+  summary          String   @default("")
+  description      String   @default("") // Markdown
+  icon             String   @default("scissor")
+  status           String   @default("DRAFT") // DRAFT | ACTIVE | ARCHIVED
+  isNew            Boolean  @default(false)
+  acceptsFavorites Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  media        ServiceMedia[]
+  barbers      ServiceBarber[]
+  components   ServiceComponent[] @relation("ComboOf")
+  partOfCombos ServiceComponent[] @relation("ComponentOf")
+  offers       OfferService[]
+  favorites    Favorite[]
+  reviews      Review[]
+}
+
+model ServiceMedia {
+  id        String  @id @default(cuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  url       String
+  kind      String  @default("IMAGE") // IMAGE | VIDEO
+  position  Int     @default(0)
+}
+
+model ServiceBarber {
+  serviceId String
+  barberId  String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  barber    User    @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, barberId])
+}
+
+// Um serviço da categoria Combos pode listar os serviços que o compõem. Quando
+// o carrinho tem todos os componentes, o desconto do combo é aplicado.
+model ServiceComponent {
+  comboId     String
+  componentId String
+  combo       Service @relation("ComboOf", fields: [comboId], references: [id], onDelete: Cascade)
+  component   Service @relation("ComponentOf", fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@id([comboId, componentId])
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  priceCents     Int
+  detail         String   @default("") // "efeito seco · 120 g"
+  description    String   @default("")
+  icon           String   @default("bag")
+  highlight      String? // "Mais vendido"
+  available      Boolean  @default(true)
+  sellOnline     Boolean  @default(true)
+  barbersCanSell Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  media          ProductMedia[]
+  favorites      Favorite[]
+  reviews        ProductReview[]
+}
+
+model ProductMedia {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  position  Int     @default(0)
+}
+
+model Offer {
+  id            String    @id @default(cuid())
+  name          String
+  discountType  String // PERCENT | FIXED
+  discountValue Int // PERCENT: pontos-base · FIXED: centavos
+  usageLimit    Int?
+  usedCount     Int       @default(0)
+  startsOn      DateTime
+  endsOn        DateTime
+  weekdays      String    @default("[0,1,2,3,4,5,6]") // JSON: number[] (0 = domingo)
+  endedAt       DateTime?
+  createdAt     DateTime  @default(now())
+  services      OfferService[]
+}
+
+model OfferService {
+  offerId   String
+  serviceId String
+  offer     Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([offerId, serviceId])
+}
+
+// ── Pedidos ─────────────────────────────────────────────────────────────────
+
+model Order {
+  id                 String    @id @default(cuid())
+  code               String    @unique // BRV-7F2K9 · AVL-0412
+  origin             String    @default("SITE") // SITE | WALK_IN
+  type               String    @default("APPOINTMENT") // APPOINTMENT | PICKUP
+  status             String    @default("CART") // CART | PENDING_PAYMENT | SCHEDULED | IN_SERVICE | COMPLETED | CANCELLED | NO_SHOW
+  paymentChoice      String? // PIX | CREDIT | DEBIT | CASH
+  installments       Int       @default(1)
+  customerId         String?
+  customer           User?     @relation("OrderCustomer", fields: [customerId], references: [id])
+  customerName       String    @default("")
+  customerPhone      String?
+  barberId           String?
+  barber             User?     @relation("OrderBarber", fields: [barberId], references: [id])
+  anyBarber          Boolean   @default(false)
+  scheduledStart     DateTime?
+  scheduledEnd       DateTime?
+  holdExpiresAt      DateTime?
+  startedAt          DateTime?
+  pausedAt           DateTime?
+  pausedSeconds      Int       @default(0)
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  completionCode     String?
+  createdById        String?
+  subtotalCents      Int       @default(0)
+  discountCents      Int       @default(0)
+  totalCents         Int       @default(0)
+  paidCents          Int       @default(0)
+  refundedCents      Int       @default(0)
+  paidAt             DateTime?
+  fitInAt            DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  items           OrderItem[]
+  payments        Payment[]
+  events          OrderEvent[]
+  commissionLines CommissionLine[]
+  review          Review?
+  productReviews  ProductReview[]
+
+  @@index([status])
+  @@index([barberId, scheduledStart])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id               String    @id @default(cuid())
+  orderId          String
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind             String // SERVICE | PRODUCT
+  serviceId        String?
+  productId        String?
+  name             String
+  categoryName     String    @default("")
+  categoryId       String?
+  icon             String    @default("scissor")
+  unitPriceCents   Int
+  listPriceCents   Int
+  quantity         Int       @default(1)
+  discountCents    Int       @default(0)
+  durationMin      Int       @default(0)
+  addedById        String?
+  addedByRole      String    @default("CLIENT") // CLIENT | BARBER | RECEPTIONIST | ADMIN
+  addedDuringService Boolean @default(false)
+  doneAt           DateTime?
+  deliveredAt      DateTime?
+  position         Int       @default(0)
+  createdAt        DateTime  @default(now())
+}
+
+model OrderEvent {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type        String
+  description String
+  meta        String   @default("{}") // JSON
+  actorId     String?
+  actorName   String?
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ── Pagamentos ──────────────────────────────────────────────────────────────
+
+model Payment {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method        String // PIX | CREDIT | DEBIT | CASH | STORE_PIX | TERMINAL_DEBIT | TERMINAL_CREDIT
+  channel       String // ONLINE | COUNTER
+  provider      String    @default("NONE") // STRIPE | FAKE | NONE
+  providerRef   String?
+  status        String    @default("PENDING") // PENDING | SUCCEEDED | FAILED | CANCELLED | REFUNDED
+  amountCents   Int
+  feeCents      Int       @default(0)
+  receivedCents Int?
+  changeCents   Int?
+  installments  Int       @default(1)
+  pixCode       String?
+  expiresAt     DateTime?
+  cardBrand     String?
+  cardLast4     String?
+  recordedById  String?
+  recordedByName String?
+  confirmedAt   DateTime?
+  refundedAt    DateTime?
+  refundedCents Int       @default(0)
+  refundedById  String?
+  createdAt     DateTime  @default(now())
+
+  @@index([orderId])
+  @@index([providerRef])
+}
+
+// ── Comissões ───────────────────────────────────────────────────────────────
+
+model CommissionLine {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  barberId    String
+  barber      User     @relation(fields: [barberId], references: [id])
+  kind        String // SERVICE | PRODUCT
+  baseCents   Int
+  rateBps     Int
+  amountCents Int
+  createdAt   DateTime @default(now())
+
+  @@index([barberId, createdAt])
+}
+
+model CommissionCategoryRule {
+  categoryId String   @id
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  rateBps    Int
+  reason     String   @default("")
+}
+
+// ── Avaliações e engajamento ────────────────────────────────────────────────
+
+model Review {
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      User      @relation("ReviewCustomer", fields: [customerId], references: [id])
+  barberId      String?
+  barber        User?     @relation("ReviewBarber", fields: [barberId], references: [id])
+  serviceId     String?
+  service       Service?  @relation(fields: [serviceId], references: [id])
+  serviceLabel  String    @default("")
+  serviceRating Int
+  barberRating  Int
+  text          String?
+  showOnHome    Boolean   @default(false)
+  reply         String?
+  repliedById   String?
+  repliedAt     DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("FavoriteOwner", fields: [userId], references: [id], onDelete: Cascade)
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  barberId  String?
+  barber    User?    @relation("FavoriteBarber", fields: [barberId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, serviceId])
+  @@unique([userId, barberId])
+  @@unique([userId, productId])
+}
+
+// Avaliação de produto: o cliente dá nota aos produtos que comprou (no site
+// ou lançados no atendimento) depois que o pedido foi concluído.
+model ProductReview {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   User     @relation("ProductReviewCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  rating     Int
+  text       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([orderId, productId])
+  @@index([productId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  tone      String    @default("n") // ok | warn | bad | n | info
+  icon      String    @default("bell")
+  title     String
+  body      String    @default("")
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  event     String
+  to        String
+  subject   String
+  status    String // SENT | FAILED | SKIPPED
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+// ── Negócio ─────────────────────────────────────────────────────────────────
+
+// Configurações por seção (dados da casa, horários, agenda, pagamento,
+// comissões, notificações). O valor é um documento JSON validado pelo domínio.
+model Setting {
+  key         String   @id
+  value       String
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Closure {
+  id        String   @id @default(cuid())
+  startsOn  DateTime
+  endsOn    DateTime
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model LegalDocument {
+  id           String    @id @default(cuid())
+  kind         String // PRIVACY | TERMS
+  version      Int
+  content      String
+  status       String    @default("DRAFT") // DRAFT | PUBLISHED | SUPERSEDED
+  publishedAt  DateTime?
+  editedById   String?
+  editedByName String?
+  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
+
+  @@unique([kind, version])
+}
+
+model LegalAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       String
+  version    Int
+  acceptedAt DateTime @default(now())
+
+  @@unique([userId, kind, version])
+}
