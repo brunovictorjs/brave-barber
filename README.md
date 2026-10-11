@@ -1,6 +1,6 @@
 # Brave Barber
 
-Agendamento, pedidos, balcão e administração da barbearia. A implementação segue o protótipo aprovado (`docs/prototype/`).
+Agendamento, pedidos, balcão e administração da barbearia.
 
 - **apps/web**: Next.js 15, TypeScript, shadcn/ui (Radix) com os tokens do design system e GSAP para animações.
 - **apps/api**: NestJS 11 em monólito modular (DDD + Clean Architecture) com Prisma: SQLite no desenvolvimento e PostgreSQL/Supabase em produção.
