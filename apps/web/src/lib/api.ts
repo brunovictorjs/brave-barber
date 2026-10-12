@@ -5,6 +5,8 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly fields?: Record<string, string>,
+    /** Dados extras do erro de regra (ex.: pedidos em conflito). */
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -35,8 +37,8 @@ async function request<T>(method: string, path: string, body?: unknown, query?: 
   const text = await res.text();
   const data = text ? JSON.parse(text) : undefined;
   if (!res.ok) {
-    const err = (data ?? {}) as { code?: string; message?: string; fields?: Record<string, string> };
-    throw new ApiError(res.status, err.code ?? `http_${res.status}`, err.message ?? 'Algo deu errado. Tente de novo.', err.fields);
+    const err = (data ?? {}) as { code?: string; message?: string; fields?: Record<string, string>; details?: Record<string, unknown> };
+    throw new ApiError(res.status, err.code ?? `http_${res.status}`, err.message ?? 'Algo deu errado. Tente de novo.', err.fields, err.details);
   }
   return data as T;
 }

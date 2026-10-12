@@ -101,9 +101,9 @@ export class StaffOrdersService {
     });
     const list = await this.views.many(rows, 'staff');
 
-    const hours = await this.settings.get('hours');
-    const h = hours.weekly.find((w) => w.weekday === weekdayOf(day));
-    const openMin = h?.open && h.close ? parseHm(h.close) - parseHm(h.open) - (h.breakStart && h.breakEnd ? parseHm(h.breakEnd) - parseHm(h.breakStart) : 0) : 0;
+    // Janelas em que este barbeiro atende no dia (horário da casa, semana própria e períodos).
+    const windows = (await this.availability.windowsOn(day, [actor.id])).get(actor.id) ?? [];
+    const openMin = windows.reduce((s, w) => s + (w.end - w.start), 0);
     const active = list.filter((o) => o.status !== 'NO_SHOW');
     const chairMin = active.reduce((s, o) => s + o.durationMin, 0);
 
@@ -121,17 +121,19 @@ export class StaffOrdersService {
 
     // Folgas para encaixe entre os próximos atendimentos.
     const gaps: { time: string; minutes: number }[] = [];
-    if (h?.open && h.close && day === toDateKey(now, this.tz)) {
+    if (windows.length && day === toDateKey(now, this.tz)) {
       const rules = await this.settings.get('scheduling');
-      let cursor = Math.max(minutesOfDay(now, this.tz), parseHm(h.open));
-      for (const o of active.filter((x) => x.status !== 'COMPLETED')) {
-        const s = minutesOfDay(new Date(o.scheduledStart!), this.tz);
-        const e = minutesOfDay(new Date(o.scheduledEnd!), this.tz);
-        if (s - cursor >= rules.slotIntervalMin) gaps.push({ time: formatHm(cursor), minutes: s - cursor });
-        cursor = Math.max(cursor, e + rules.bufferMin);
+      const booked = active
+        .filter((x) => x.status !== 'COMPLETED')
+        .map((o) => ({ s: minutesOfDay(new Date(o.scheduledStart!), this.tz), e: minutesOfDay(new Date(o.scheduledEnd!), this.tz) }));
+      for (const w of windows) {
+        let cursor = Math.max(minutesOfDay(now, this.tz), w.start);
+        for (const { s, e } of booked.filter((b) => b.e > w.start && b.s < w.end)) {
+          if (s - cursor >= rules.slotIntervalMin) gaps.push({ time: formatHm(cursor), minutes: s - cursor });
+          cursor = Math.max(cursor, e + rules.bufferMin);
+        }
+        if (w.end - cursor >= rules.slotIntervalMin) gaps.push({ time: formatHm(cursor), minutes: Math.min(w.end - cursor, rules.slotIntervalMin) });
       }
-      const close = parseHm(h.close);
-      if (close - cursor >= rules.slotIntervalMin) gaps.push({ time: formatHm(cursor), minutes: Math.min(close - cursor, rules.slotIntervalMin) });
     }
 
     return {
@@ -148,6 +150,8 @@ export class StaffOrdersService {
       upcoming,
       completed: list.filter((o) => o.status === 'COMPLETED'),
       gaps: gaps.slice(0, 3),
+      /** Turnos do barbeiro no dia ("14:00–18:00"); vazio = agenda fechada. */
+      workHours: windows.map((w) => `${formatHm(w.start)}–${formatHm(w.end)}`),
     };
   }
 

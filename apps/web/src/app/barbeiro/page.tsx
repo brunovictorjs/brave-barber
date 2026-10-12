@@ -40,7 +40,10 @@ export default function AgendaPage() {
           {me ? <Avatar data={me.avatar} size={38} /> : null}
           <div className="flex-1">
             <div className="s b">{me?.name}</div>
-            <div className="xs muted">{a ? cap(longDate(a.date)) : ''}</div>
+            <div className="xs muted">
+              {a ? cap(longDate(a.date)) : ''}
+              {a ? (a.workHours.length ? ` · seu horário ${a.workHours.join(' e ')}` : ' · agenda fechada hoje') : ''}
+            </div>
           </div>
           <Link className="ibtn" href="/barbeiro/avisos" aria-label={notes?.unread ? 'Avisos, novos' : 'Avisos'}>
             <Icon name="bell" />

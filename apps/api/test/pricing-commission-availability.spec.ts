@@ -1,7 +1,8 @@
 import { calculatePrices } from '@/modules/catalog/domain/price-calculator';
 import { Offer } from '@/modules/catalog/domain/offer';
 import { calculateCommission } from '@/modules/commissions/domain/commission-calculator';
-import { computeSlots, nextGap } from '@/modules/scheduling/domain/availability';
+import { computeSlots, nextGap, shifts } from '@/modules/scheduling/domain/availability';
+import { emptyWeek, workWindows } from '@/modules/scheduling/domain/staff-schedule';
 import { DEFAULT_SETTINGS } from '@/modules/business/domain/settings';
 import { zonedTime, toDateKey, minutesOfDay } from '@/shared/domain/business-time';
 
@@ -116,8 +117,64 @@ describe('Agenda', () => {
   });
 
   it('encaixe procura a próxima folga do profissional', () => {
-    const gap = nextGap(schedule, [{ start: 16 * 60, end: 17 * 60 }, { start: 17 * 60 + 30, end: 18 * 60 }], 16 * 60 + 10, 25, 5);
+    const gap = nextGap(shifts(schedule), [{ start: 16 * 60, end: 17 * 60 }, { start: 17 * 60 + 30, end: 18 * 60 }], 16 * 60 + 10, 25, 5);
     expect(gap).toBe(18 * 60 + 5);
+  });
+
+  it('quem trabalha só à tarde não aparece livre de manhã', () => {
+    const slots = computeSlots({
+      schedule,
+      durationMin: 40,
+      stepMin: 40,
+      bufferMin: 0,
+      earliestStartMin: null,
+      barberIds: ['breno', 'amanda'],
+      busy: new Map(),
+      work: new Map([['amanda', [{ start: 14 * 60, end: 18 * 60 }]]]),
+    });
+    expect(slots.find((s) => s.minutes === 10 * 60 + 20)!.freeBarberIds).toEqual(['breno']);
+    expect(slots.find((s) => s.minutes === 14 * 60 + 10)!.freeBarberIds).toEqual(['breno', 'amanda']);
+    expect(slots.find((s) => s.minutes === 17 * 60 + 30)!.freeBarberIds).toEqual(['breno']); // 17:30 + 40 passa das 18:00
+  });
+
+  it('encaixe respeita o turno do profissional', () => {
+    expect(nextGap([{ start: 14 * 60, end: 18 * 60 }], [], 10 * 60, 30, 5)).toBe(14 * 60);
+    expect(nextGap([], [], 10 * 60, 30, 5)).toBeNull();
+  });
+
+  describe('agenda do profissional', () => {
+    const week = emptyWeek().map((d) => (d.weekday === 2 ? { ...d, start: '14:00', end: '18:00' } : d));
+
+    it('por padrão segue os turnos da casa', () => {
+      expect(workWindows(schedule, 2, { custom: false, weekly: emptyWeek() }, [])).toEqual([
+        { start: 9 * 60, end: 12 * 60 + 30 },
+        { start: 13 * 60 + 30, end: 20 * 60 },
+      ]);
+    });
+
+    it('semana própria fica dentro do horário da casa e folga zera o dia', () => {
+      expect(workWindows(schedule, 2, { custom: true, weekly: week }, [])).toEqual([{ start: 14 * 60, end: 18 * 60 }]);
+      expect(workWindows(schedule, 3, { custom: true, weekly: week }, [])).toEqual([]);
+      const late = emptyWeek().map((d) => ({ ...d, start: '12:00', end: '22:00' }));
+      expect(workWindows(schedule, 2, { custom: true, weekly: late }, [])).toEqual([
+        { start: 12 * 60, end: 12 * 60 + 30 },
+        { start: 13 * 60 + 30, end: 20 * 60 },
+      ]);
+    });
+
+    it('período aberto amplia e período fechado corta, sempre dentro da casa', () => {
+      const own = { custom: true, weekly: week };
+      expect(workWindows(schedule, 2, own, [{ kind: 'OPEN', start: 9 * 60, end: 11 * 60 }])).toEqual([
+        { start: 9 * 60, end: 11 * 60 },
+        { start: 14 * 60, end: 18 * 60 },
+      ]);
+      expect(workWindows(schedule, 2, own, [{ kind: 'CLOSED', start: 15 * 60, end: 16 * 60 }])).toEqual([
+        { start: 14 * 60, end: 15 * 60 },
+        { start: 16 * 60, end: 18 * 60 },
+      ]);
+      expect(workWindows(schedule, 2, own, [{ kind: 'CLOSED', start: 0, end: 24 * 60 }])).toEqual([]);
+      expect(workWindows(null, 2, own, [{ kind: 'OPEN', start: 9 * 60, end: 11 * 60 }])).toEqual([]);
+    });
   });
 
   it('converte hora local do negócio para UTC e de volta', () => {

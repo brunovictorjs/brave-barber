@@ -4,7 +4,8 @@
  * Um horário S serve para um atendimento de D minutos quando:
  *   • [S, S+D] cabe inteiro num turno (não atravessa o intervalo nem o fechamento);
  *   • S respeita a antecedência mínima (para hoje);
- *   • há pelo menos um profissional apto sem nada marcado em [S−folga, S+D+folga).
+ *   • há pelo menos um profissional apto, dentro da agenda dele (`work`) e sem
+ *     nada marcado em [S−folga, S+D+folga).
  */
 export interface Interval {
   start: number;
@@ -27,6 +28,8 @@ export interface SlotQuery {
   earliestStartMin: number | null;
   barberIds: string[];
   busy: Map<string, Interval[]>;
+  /** Janelas de trabalho de cada profissional no dia. Sem a chave = horário da casa. */
+  work?: Map<string, Interval[]>;
 }
 
 export interface Slot {
@@ -54,13 +57,22 @@ export function isBarberFree(busy: Interval[] | undefined, start: number, durati
   return !busy.some((b) => overlaps(wanted, b));
 }
 
+/** O atendimento [start, start+duração] cabe inteiro numa janela? */
+export function fitsWindows(windows: Interval[], start: number, durationMin: number): boolean {
+  return windows.some((w) => start >= w.start && start + durationMin <= w.end);
+}
+
 export function computeSlots(q: SlotQuery): Slot[] {
   if (!q.schedule || q.durationMin <= 0 || q.barberIds.length === 0) return [];
   const slots: Slot[] = [];
   for (const shift of shifts(q.schedule)) {
     for (let start = shift.start; start + q.durationMin <= shift.end; start += q.stepMin) {
       if (q.earliestStartMin !== null && start < q.earliestStartMin) continue;
-      const free = q.barberIds.filter((id) => isBarberFree(q.busy.get(id), start, q.durationMin, q.bufferMin));
+      const free = q.barberIds.filter((id) => {
+        const work = q.work?.get(id);
+        if (work && !fitsWindows(work, start, q.durationMin)) return false;
+        return isBarberFree(q.busy.get(id), start, q.durationMin, q.bufferMin);
+      });
       slots.push({ minutes: start, freeBarberIds: free });
     }
   }
@@ -69,12 +81,12 @@ export function computeSlots(q: SlotQuery): Slot[] {
 
 /**
  * Próxima janela livre de um profissional a partir de `fromMin`, para encaixe
- * de quem chegou atrasado. Não respeita a grade de horários: qualquer folga serve.
+ * de quem chegou atrasado. Não respeita a grade de horários: qualquer folga
+ * dentro das janelas de trabalho dele serve.
  */
-export function nextGap(schedule: DaySchedule | null, busy: Interval[], fromMin: number, durationMin: number, bufferMin: number): number | null {
-  if (!schedule) return null;
+export function nextGap(windows: Interval[], busy: Interval[], fromMin: number, durationMin: number, bufferMin: number): number | null {
   const sorted = [...busy].sort((a, b) => a.start - b.start);
-  for (const shift of shifts(schedule)) {
+  for (const shift of windows) {
     let cursor = Math.max(shift.start, fromMin);
     for (const b of sorted) {
       if (b.end + bufferMin <= cursor) continue;

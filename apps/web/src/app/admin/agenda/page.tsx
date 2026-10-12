@@ -48,11 +48,41 @@ interface Agenda {
   breakStart: string | null;
   breakEnd: string | null;
   nowMinutes: number | null;
-  barbers: { id: string; name: string; firstName: string; avatar: AvatarData; events: AgendaEvent[] }[];
+  barbers: { id: string; name: string; firstName: string; avatar: AvatarData; windows: Interval[]; events: AgendaEvent[] }[];
+}
+
+interface Interval {
+  start: number;
+  end: number;
 }
 
 const PX_PER_MIN = 1.5;
 const HOUR_PX = 60 * PX_PER_MIN;
+
+const toMin = (v: string) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5));
+
+/**
+ * Trechos do expediente da casa em que o profissional não atende (outro turno,
+ * folga ou agenda fechada). O intervalo da casa já tem bloco próprio e fica de fora.
+ */
+function offHours(a: Agenda, windows: Interval[]): Interval[] {
+  if (a.openMin === null || a.closeMin === null) return [];
+  const out: Interval[] = [];
+  let cursor = a.openMin;
+  for (const w of [...windows].sort((x, y) => x.start - y.start)) {
+    if (w.start > cursor) out.push({ start: cursor, end: w.start });
+    cursor = Math.max(cursor, w.end);
+  }
+  if (cursor < a.closeMin) out.push({ start: cursor, end: a.closeMin });
+  if (!a.breakStart || !a.breakEnd) return out;
+  const b = { start: toMin(a.breakStart), end: toMin(a.breakEnd) };
+  return out.flatMap((o) =>
+    [
+      { start: o.start, end: Math.min(o.end, b.start) },
+      { start: Math.max(o.start, b.end), end: o.end },
+    ].filter((p) => p.end > p.start),
+  );
+}
 
 /** Agenda da casa (tela 41): uma coluna por profissional, na escala do dia. */
 export default function HouseAgendaPage() {
@@ -90,6 +120,10 @@ export default function HouseAgendaPage() {
         <button type="button" className="btn sm dark" onClick={() => setDate(dateKey())}>
           Hoje
         </button>
+        <Link className="btn sm dark" href="/admin/configuracoes/equipe">
+          <Icon name="clock" size="s" />
+          Agenda da equipe
+        </Link>
       </AdminHeader>
       <main className="acontent">
         <div className="filters">
@@ -109,6 +143,10 @@ export default function HouseAgendaPage() {
             <i style={{ background: 'repeating-linear-gradient(135deg, #5a5a5a 0 2px, #1a1a1a 2px 4px)', border: '1px solid #f2f2f2' }} />
             atrasado / encaixe
           </span>
+          <span className="lgnd m-0 ml-3">
+            <i style={{ background: 'repeating-linear-gradient(135deg, #242424 0 3px, #111 3px 7px)', border: '1px solid #2e2e2e' }} />
+            fora do horário
+          </span>
         </div>
         {isLoading || !a ? (
           <Skeleton className="h-[600px]" />
@@ -122,6 +160,7 @@ export default function HouseAgendaPage() {
                   <Avatar data={b.avatar} size={26} />
                   <span className="s b">{b.firstName}</span>
                   <span className="xs muted">{b.events.filter((e) => e.state !== 'no_show').length}</span>
+                  {a.openMin !== null && !b.windows.length ? <span className="badge n">folga</span> : null}
                 </div>
               ))}
               <div className="relative" style={{ height: y(end) }}>
@@ -133,6 +172,15 @@ export default function HouseAgendaPage() {
               </div>
               {a.barbers.map((b) => (
                 <div key={b.id} className="relative" style={{ height: y(end) + 1, background: grid }}>
+                  {offHours(a, b.windows).map((o) => (
+                    <div
+                      key={o.start}
+                      className="xs absolute inset-x-0 grid place-items-center rounded-[4px] border border-[#2e2e2e] text-[#6a6a6a]"
+                      style={{ top: y(o.start), height: (o.end - o.start) * PX_PER_MIN, background: 'repeating-linear-gradient(135deg, #1a1a1a 0 3px, #0f0f0f 3px 9px)' }}
+                    >
+                      {b.windows.length ? 'fora do horário' : 'agenda fechada'}
+                    </div>
+                  ))}
                   {a.breakStart && a.breakEnd ? (
                     <div
                       className="xs absolute inset-x-0 grid place-items-center rounded-[4px] border border-dashed border-[#2e2e2e] text-[#5a5a5a]"

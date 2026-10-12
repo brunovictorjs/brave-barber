@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Clock } from '@/shared/infrastructure/clock';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
 import { fullName } from '@/shared/domain/avatar';
-import { BarberSummary, OccupancyReader } from '../domain/occupancy';
+import { BarberSummary, BookedAppointment, OccupancyReader } from '../domain/occupancy';
 
 @Injectable()
 export class PrismaOccupancyReader extends OccupancyReader {
@@ -88,5 +88,32 @@ export class PrismaOccupancyReader extends OccupancyReader {
       orderBy: { firstName: 'asc' },
     });
     return barbers.map((b) => this.toSummary(b));
+  }
+
+  async upcomingAppointments(barberId: string, from: Date): Promise<BookedAppointment[]> {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        barberId,
+        type: 'APPOINTMENT',
+        scheduledStart: { gte: from },
+        OR: [{ status: 'SCHEDULED' }, { status: 'PENDING_PAYMENT', holdExpiresAt: { gt: this.clock.now() } }],
+      },
+      select: {
+        id: true,
+        code: true,
+        customerName: true,
+        scheduledStart: true,
+        scheduledEnd: true,
+        customer: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { scheduledStart: 'asc' },
+    });
+    return orders.map((o) => ({
+      orderId: o.id,
+      code: o.code,
+      customerName: o.customerName || (o.customer ? fullName(o.customer) : 'Cliente'),
+      start: o.scheduledStart!,
+      end: o.scheduledEnd!,
+    }));
   }
 }

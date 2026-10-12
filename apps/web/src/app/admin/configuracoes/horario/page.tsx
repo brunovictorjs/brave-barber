@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { SettingsPage, useSettingsSection } from '@/components/admin/settings';
@@ -93,7 +94,9 @@ export default function HoursSettingsPage() {
             <div className="rowx mb-4">
               <h2 className="s b m-0">Semana padrão</h2>
               <span className="sp" />
-              <span className="xs muted">vale para a casa toda</span>
+              <Link className="xs muted underline" href="/admin/configuracoes/equipe">
+                vale para a casa toda · horário de cada profissional
+              </Link>
             </div>
             <div className="tbl">
               <table className="t min-w-[560px]">

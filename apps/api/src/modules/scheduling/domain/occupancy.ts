@@ -1,5 +1,14 @@
 import type { Interval } from './availability';
 
+/** Atendimento marcado (ainda não começou) na agenda de um profissional. */
+export interface BookedAppointment {
+  orderId: string;
+  code: string;
+  customerName: string;
+  start: Date;
+  end: Date;
+}
+
 export interface BarberSummary {
   id: string;
   name: string;
@@ -18,6 +27,8 @@ export abstract class OccupancyReader {
   /** Profissionais ativos e aptos a executar TODOS os serviços informados. */
   abstract eligibleBarbers(serviceIds: string[]): Promise<BarberSummary[]>;
   abstract activeBarbers(): Promise<BarberSummary[]>;
+  /** Atendimentos de um profissional que ainda vão acontecer a partir de `from`. */
+  abstract upcomingAppointments(barberId: string, from: Date): Promise<BookedAppointment[]>;
   /** Soma das durações dos serviços (minutos). */
   abstract totalDuration(serviceIds: string[]): Promise<number>;
   /** Menor duração entre os serviços ativos (para "próximo horário livre"). */

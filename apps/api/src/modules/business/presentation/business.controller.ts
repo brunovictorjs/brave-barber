@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { z } from 'zod';
-import { Actor, CurrentUser, Public, Roles } from '@/shared/presentation/auth';
+import { Actor, CurrentUser, hasRole, Public, Roles } from '@/shared/presentation/auth';
 import { ZodPipe } from '@/shared/presentation/zod';
 import { DomainError } from '@/shared/domain/domain-error';
 import { SettingsService } from '../application/settings.service';
@@ -8,9 +8,14 @@ import { ClosuresService, closureInput } from '../application/closures.service';
 import { LEGAL_KINDS, LegalKind, LegalService, legalDraftInput } from '../application/legal.service';
 import { SETTINGS_SCHEMAS, SettingsKey } from '../domain/settings';
 
-function settingsKey(raw: string): SettingsKey {
+/** Seções que a balconista também configura (aba "Horário de funcionamento"). */
+const RECEPTIONIST_SETTINGS: SettingsKey[] = ['hours', 'scheduling'];
+
+function settingsKey(raw: string, actor: Actor): SettingsKey {
   if (!(raw in SETTINGS_SCHEMAS)) throw DomainError.notFound('Seção de configuração');
-  return raw as SettingsKey;
+  const key = raw as SettingsKey;
+  if (!hasRole(actor, 'ADMIN') && !RECEPTIONIST_SETTINGS.includes(key)) throw DomainError.forbidden('Seu perfil não tem acesso a esta configuração.');
+  return key;
 }
 
 function legalKind(raw: string): LegalKind {
@@ -52,16 +57,19 @@ export class SettingsController {
   ) {}
 
   @Get('closures')
+  @Roles('RECEPTIONIST')
   listClosures() {
     return this.closures.list();
   }
 
   @Post('closures')
+  @Roles('RECEPTIONIST')
   createClosure(@Body(new ZodPipe(closureInput)) body: z.infer<typeof closureInput>) {
     return this.closures.create(body);
   }
 
   @Delete('closures/:id')
+  @Roles('RECEPTIONIST')
   async removeClosure(@Param('id') id: string) {
     await this.closures.remove(id);
     return { ok: true };
@@ -87,15 +95,17 @@ export class SettingsController {
   }
 
   @Get(':key')
-  async get(@Param('key') key: string) {
-    const k = settingsKey(key);
+  @Roles('RECEPTIONIST')
+  async get(@Param('key') key: string, @CurrentUser() actor: Actor) {
+    const k = settingsKey(key, actor);
     const [value, updatedAt] = await Promise.all([this.settings.get(k), this.settings.updatedAt(k)]);
     return { value, updatedAt };
   }
 
   @Put(':key')
+  @Roles('RECEPTIONIST')
   async update(@Param('key') key: string, @Body() body: unknown, @CurrentUser() actor: Actor) {
-    const k = settingsKey(key);
+    const k = settingsKey(key, actor);
     const value = await this.settings.update(k, body, actor.id);
     return { value, updatedAt: new Date() };
   }

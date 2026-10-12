@@ -19,6 +19,8 @@ interface NavItem {
   icon: string;
   match: (p: string) => boolean;
   roles: ('ADMIN' | 'RECEPTIONIST')[];
+  /** Destino para a balconista, quando difere do admin. */
+  receptionistHref?: string;
 }
 
 const NAV: { group: string; items: NavItem[] }[] = [
@@ -52,7 +54,16 @@ const NAV: { group: string; items: NavItem[] }[] = [
   },
   {
     group: 'Negócio',
-    items: [{ href: '/admin/configuracoes/dados', label: 'Configurações', icon: 'cog', match: (p) => p.startsWith('/admin/configuracoes'), roles: ['ADMIN'] }],
+    items: [
+      {
+        href: '/admin/configuracoes/dados',
+        receptionistHref: '/admin/configuracoes/horario',
+        label: 'Configurações',
+        icon: 'cog',
+        match: (p) => p.startsWith('/admin/configuracoes'),
+        roles: ['ADMIN', 'RECEPTIONIST'],
+      },
+    ],
   },
 ];
 
@@ -61,7 +72,9 @@ export function navFor(me: Me) {
   return NAV.map((g) => ({
     group: g.group,
     // O admin vê tudo; o balcão também aparece para ele porque é onde se dá baixa.
-    items: g.items.filter((i) => (isAdmin ? true : i.roles.includes('RECEPTIONIST'))),
+    items: g.items
+      .filter((i) => (isAdmin ? true : i.roles.includes('RECEPTIONIST')))
+      .map((i) => (!isAdmin && i.receptionistHref ? { ...i, href: i.receptionistHref } : i)),
   })).filter((g) => g.items.length);
 }
 

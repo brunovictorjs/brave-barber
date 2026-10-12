@@ -406,6 +406,8 @@ export interface StaffAgenda {
   upcoming: OrderView[];
   completed: OrderView[];
   gaps: { time: string; minutes: number }[];
+  /** Turnos do barbeiro no dia ("14:00–18:00"); vazio = agenda fechada. */
+  workHours: string[];
 }
 
 export interface Earnings {

@@ -12,6 +12,7 @@ import { Clock } from '@/shared/infrastructure/clock';
 import { EventBus } from '@/shared/infrastructure/event-bus';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
 import { SettingsService } from '@/modules/business/application/settings.service';
+import { AvailabilityService } from '@/modules/scheduling/application/availability.service';
 import { OrderEventOf } from '../domain/order';
 import { OrderRepository, PaymentGateway } from '../domain/ports';
 import { actorRef } from './actor';
@@ -57,6 +58,7 @@ export class AdminOrdersService {
     private readonly events: EventBus,
     private readonly clock: Clock,
     private readonly config: AppConfig,
+    private readonly availability: AvailabilityService,
   ) {}
 
   private get tz() {
@@ -247,6 +249,7 @@ export class AdminOrdersService {
     ]);
     const views = await this.views.many(rows, 'admin');
     const h = hours.weekly.find((w) => w.weekday === weekdayOf(day));
+    const windows = await this.availability.windowsOn(day, barbers.map((b) => b.id));
     return {
       date: day,
       open: h?.open ?? null,
@@ -259,6 +262,8 @@ export class AdminOrdersService {
         name: fullName(b),
         firstName: b.firstName,
         avatar: avatarFor(b),
+        // Turnos em que o profissional atende no dia; fora deles a coluna aparece fechada.
+        windows: windows.get(b.id) ?? [],
         events: views
           .filter((v) => v.barber?.id === b.id)
           .map((v) => {

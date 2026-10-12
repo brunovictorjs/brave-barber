@@ -10,11 +10,12 @@ import { Skeleton } from '@/components/ui/controls';
 import { api, errorMessage } from '@/lib/api';
 import { ago } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { AdminHeader } from './shell';
+import { AdminHeader, useStaffMe } from './shell';
 
 const TABS = [
   ['dados', 'Dados da casa'],
   ['horario', 'Horário de funcionamento'],
+  ['equipe', 'Agenda da equipe'],
   ['pagamento', 'Pagamento e Stripe'],
   ['comissoes', 'Comissões'],
   ['notificacoes', 'Notificações'],
@@ -22,11 +23,16 @@ const TABS = [
   ['termos', 'Termos de serviço'],
 ] as const;
 
+/** Abas que a balconista também configura; o resto é só do administrador. */
+export const RECEPTIONIST_TABS = ['horario', 'equipe'];
+
 export function SettingsTabs() {
   const pathname = usePathname();
+  const me = useStaffMe();
+  const isAdmin = me.roles.includes('ADMIN');
   return (
     <nav className="tabs" aria-label="Seções das configurações">
-      {TABS.map(([slug, label]) => {
+      {TABS.filter(([slug]) => isAdmin || RECEPTIONIST_TABS.includes(slug)).map(([slug, label]) => {
         const on = pathname.endsWith(`/${slug}`);
         return (
           <Link key={slug} href={`/admin/configuracoes/${slug}`} className={cn(on && 'on')} aria-current={on ? 'page' : undefined}>
