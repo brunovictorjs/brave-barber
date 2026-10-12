@@ -452,4 +452,50 @@
     .ahead { padding: 12px 16px; }
     .acontent { padding: 16px; }
   }
+  /* ── cliente e barbeiro em tablet e desktop ──
+     No celular nada muda (coluna de até 480px). A partir de 768px a coluna
+     cresce conforme o tamanho da tela (Screen size): narrow para fluxos e
+     formulários, medium para listas e perfis, wide para vitrine e detalhes.
+     No desktop (1024px+) a barra de abas vira um cabeçalho fixo no topo. */
+  .gcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .glist { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .gteam { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tabbrand { display: none; }
+  .glist > :only-child, .gcards > :only-child, .gteam > :only-child { grid-column: 1 / -1; }
+
+  @media (min-width: 768px) {
+    .scr.narrow { max-width: 640px; }
+    .scr.medium { max-width: 860px; }
+    .scr.wide { max-width: 1120px; }
+    .scr.narrow, .scr.medium, .scr.wide { box-shadow: 0 0 0 1px #161616; }
+    .scr .body:not(.flush) { padding: 0 28px 28px; }
+    .scr .foot { padding-left: 28px; padding-right: 28px; }
+    .scr.medium .foot, .scr.wide .foot:not(.side) { padding-left: max(28px, calc((100% - 640px) / 2)); padding-right: max(28px, calc((100% - 640px) / 2)); }
+    .gcards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .glist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .gteam { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .topnav { height: 72px; }
+    .ttl { font-size: 18px; }
+  }
+
+  @media (min-width: 1024px) {
+    .gcards { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .scr.wide .glist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .gteam { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .scr.wide .foot.side { padding-left: calc(50% + 16px); border-top: 0; background: linear-gradient(to right, transparent calc(50% + 16px), var(--surface) calc(50% + 16px)); }
+
+    .tabbar {
+      position: fixed; top: 0; bottom: auto; left: 0; right: 0; z-index: 30;
+      height: 64px; padding: 0 max(24px, calc((100% - 1120px) / 2));
+      border-top: 0; border-bottom: 1px solid var(--line);
+      background: rgba(10, 10, 10, 0.92); backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+    }
+    .tabbrand { display: block; margin-right: auto; }
+    .tab { flex-direction: row; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--radius-sm); font-size: 11px; transition: color 0.15s, background 0.15s; }
+    .tab:hover { color: var(--ink); }
+    .tab.on { background: var(--raised-2); }
+    .tab .ic { width: 18px; height: 18px; }
+    .scr:has(> .tabbar) { padding-top: 64px; }
+  }
 }

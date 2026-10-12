@@ -56,17 +56,17 @@ export default function HomePage() {
   const catalog = home ? (cat === 'all' ? home.catalog : home.catalog.filter((s) => s.categorySlug === cat)) : [];
 
   return (
-    <Screen>
+    <Screen size="wide">
       <Body flush>
         <div ref={hero}>
-          <section className="relative h-[480px]">
+          <section className="relative h-[480px] md:h-[520px] lg:h-[560px]">
             <div data-hero="photo" className="absolute inset-0 overflow-hidden bg-[#0e0e0e]">
               {home ? <img src={coverUrl(home.shop)} alt="" className="h-full w-full object-cover" fetchPriority="high" /> : null}
             </div>
             <div className="absolute inset-0" style={{ background: 'linear-gradient(rgba(10,10,10,.2), rgba(10,10,10,.1) 30%, rgba(10,10,10,.85) 70%, #0a0a0a)' }} />
-            <div className="absolute inset-0 z-[3] flex flex-col px-[18px] py-3.5">
+            <div className="absolute inset-0 z-[3] flex flex-col px-[18px] py-3.5 md:px-7 md:py-5 lg:px-10 lg:pb-10">
               <div className="rowx">
-                <ShopLogo width={78} height={52} className="-ml-2" />
+                <ShopLogo width={78} height={52} className="-ml-2 lg:invisible" />
                 <span className="sp" />
                 {me && me.roles.some((r) => r !== 'CLIENT') ? (
                   <Link className="ibtn" href={me.roles.includes('BARBER') ? '/barbeiro/avisos' : '/admin'} aria-label="Avisos">
@@ -84,13 +84,13 @@ export default function HomePage() {
                 ) : (
                   <Skeleton className="h-[22px] w-48" />
                 )}
-                <h1 data-hero="line" className="disp mt-3.5 text-[34px] leading-[.98]">
+                <h1 data-hero="line" className="disp mt-3.5 text-[34px] leading-[.98] md:text-[48px] lg:text-[60px]">
                   Sua melhor
                   <br />
                   versão,
                 </h1>
                 <div data-hero="line">
-                  <ChromeText className="disp block text-[44px] leading-none">hora marcada</ChromeText>
+                  <ChromeText className="disp block text-[44px] leading-none md:text-[62px] lg:text-[78px]">hora marcada</ChromeText>
                 </div>
                 <p data-hero="line" className="m muted mt-3 max-w-[30ch]">
                   {home
@@ -100,8 +100,8 @@ export default function HomePage() {
               </div>
             </div>
           </section>
-          <div className="px-[18px] pb-2 pt-[18px]">
-            <Link data-hero="cta" className="btn primary mb-2.5" href="/catalogo">
+          <div className="px-[18px] pb-2 pt-[18px] md:px-7 lg:px-10">
+            <Link data-hero="cta" className="btn primary mb-2.5 md:max-w-[320px]" href="/catalogo">
               Agendar agora <Icon name="chev" size="s" />
             </Link>
             <div className="g2">
@@ -133,7 +133,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <Reveal className="px-[18px] pb-6" deps={[!!home]}>
+        <Reveal className="px-[18px] pb-6 md:px-7 lg:px-10 lg:pb-12" deps={[!!home]}>
           {home && home.news.items.length ? (
             <div data-reveal>
               <div className="sec-row">
@@ -168,7 +168,7 @@ export default function HomePage() {
                   ver tudo
                 </Link>
               </div>
-              <div className="stack">
+              <div className="glist">
                 {home.offers.map((s) => (
                   <Link key={s.id} className="card flat flex" href={`/servicos/${s.slug}`}>
                     <Photo url={s.coverUrl} icon={s.icon} className="w-28 flex-[0_0_112px] !rounded-none">
@@ -209,7 +209,7 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
-            <div className="stack">
+            <div className="glist">
               {catalog.slice(0, 4).map((s) => (
                 <ServiceRowCard key={s.id} service={s} />
               ))}
@@ -222,7 +222,7 @@ export default function HomePage() {
           {home && home.team.length ? (
             <div data-reveal>
               <h2 className="sec">Quem vai te atender</h2>
-              <div className="g2">
+              <div className="gteam">
                 {home.team.map((b) => (
                   <Link key={b.id} className="card center" href={`/profissionais/${b.id}`}>
                     <Avatar data={b.avatar} size={56} className="mx-auto mb-2.5" />

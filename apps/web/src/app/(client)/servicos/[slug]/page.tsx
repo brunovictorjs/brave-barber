@@ -27,7 +27,7 @@ export default function ServicePage({ params }: { params: Promise<{ slug: string
 
   if (error) {
     return (
-      <Screen>
+      <Screen size="wide">
         <Body>
           <div className="topnav">
             <BackButton href="/catalogo" />
@@ -42,9 +42,9 @@ export default function ServicePage({ params }: { params: Promise<{ slug: string
   const offerDays = service?.offer ? service.offer.weekdays.map((d) => weekdayName(d)).join(' e ') : '';
 
   return (
-    <Screen>
-      <Body flush>
-        <section className="relative h-[272px]">
+    <Screen size="wide">
+      <Body flush className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:p-8">
+        <section className="relative h-[272px] md:h-[380px] lg:sticky lg:top-8 lg:h-[520px] lg:overflow-hidden lg:rounded-[8px] lg:border lg:border-[var(--line)]">
           {current?.kind === 'VIDEO' ? (
             <video src={current.url} className="absolute inset-0 h-full w-full object-cover" controls playsInline />
           ) : (
@@ -87,7 +87,7 @@ export default function ServicePage({ params }: { params: Promise<{ slug: string
           ) : null}
         </section>
 
-        <div className="p-[18px]">
+        <div className="p-[18px] md:px-7 lg:p-0">
           {isLoading || !service ? (
             <div className="stack">
               <Skeleton className="h-6 w-1/3" />
@@ -152,7 +152,7 @@ export default function ServicePage({ params }: { params: Promise<{ slug: string
           )}
         </div>
       </Body>
-      <Foot className="flex items-center gap-3.5" clean={false}>
+      <Foot className="side flex items-center gap-3.5" clean={false}>
         <div>
           <div className="xs muted">Total</div>
           <div className="rowx gap-2">

@@ -26,7 +26,7 @@ export default function NoticesPage() {
   const next = agenda?.current ?? agenda?.upcoming[0];
 
   return (
-    <Screen>
+    <Screen size="medium">
       <Body>
         <TopNav
           title="Avisos"

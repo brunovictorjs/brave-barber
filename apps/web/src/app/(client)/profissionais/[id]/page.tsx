@@ -24,7 +24,7 @@ export default function BarberProfilePage({ params }: { params: Promise<{ id: st
   const toggle = useToggleFavorite();
 
   return (
-    <Screen>
+    <Screen size="medium">
       <Body>
         <TopNav
           title="Profissional"

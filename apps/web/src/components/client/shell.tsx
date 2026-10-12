@@ -3,10 +3,16 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Icon } from '@/components/brand/icon';
+import { ShopLogo } from '@/components/brand/shop-brand';
 import { cn } from '@/lib/utils';
 
-export function Screen({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <main className={cn('scr', className)}>{children}</main>;
+/**
+ * Tela do cliente/barbeiro. No celular é sempre a coluna de até 480px; em tablet
+ * e desktop a largura segue o tipo de tela: `narrow` (fluxos e formulários),
+ * `medium` (listas e perfis) ou `wide` (vitrine e detalhes).
+ */
+export function Screen({ children, className, size = 'narrow' }: { children: React.ReactNode; className?: string; size?: 'narrow' | 'medium' | 'wide' }) {
+  return <main className={cn('scr', size, className)}>{children}</main>;
 }
 
 export function Body({ children, className, flush }: { children: React.ReactNode; className?: string; flush?: boolean }) {
@@ -47,7 +53,7 @@ export function TopNav({ title, back, right, step }: { title: React.ReactNode; b
 
 const CLIENT_TABS = [
   { href: '/', label: 'Início', icon: 'home', match: (p: string) => p === '/' },
-  { href: '/catalogo', label: 'Serviços', icon: 'scissor', match: (p: string) => p.startsWith('/catalogo') || p.startsWith('/servicos') },
+  { href: '/catalogo', label: 'Serviços', icon: 'scissor', match: (p: string) => p.startsWith('/catalogo') || p.startsWith('/servicos') || p.startsWith('/produtos') },
   { href: '/pedidos', label: 'Agenda', icon: 'cal', match: (p: string) => p.startsWith('/pedidos') },
   { href: '/perfil', label: 'Perfil', icon: 'user', match: (p: string) => p.startsWith('/perfil') || p.startsWith('/favoritos') },
 ];
@@ -56,6 +62,9 @@ export function ClientTabBar() {
   const pathname = usePathname();
   return (
     <nav className="tabbar" aria-label="Navegação principal">
+      <Link href="/" className="tabbrand" aria-label="Início">
+        <ShopLogo width={72} height={48} />
+      </Link>
       {CLIENT_TABS.map((t) => {
         const on = t.match(pathname);
         return (
@@ -80,6 +89,9 @@ export function BarberTabBar() {
   const pathname = usePathname();
   return (
     <nav className="tabbar" aria-label="Navegação do barbeiro">
+      <Link href="/barbeiro" className="tabbrand" aria-label="Agenda">
+        <ShopLogo width={72} height={48} />
+      </Link>
       {BARBER_TABS.map((t) => {
         const on = t.match(pathname);
         return (

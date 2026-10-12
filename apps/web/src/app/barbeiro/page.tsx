@@ -34,7 +34,7 @@ export default function AgendaPage() {
   const inService = current?.status === 'IN_SERVICE';
 
   return (
-    <Screen>
+    <Screen size="medium">
       <Body>
         <div className="topnav">
           {me ? <Avatar data={me.avatar} size={38} /> : null}

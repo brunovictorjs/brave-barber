@@ -46,7 +46,7 @@ export default function EarningsPage() {
   const max = e ? e.byDay.reduce((m, d, i) => (d.cents > (e.byDay[m]?.cents ?? 0) ? i : m), 0) : 0;
 
   return (
-    <Screen>
+    <Screen size="medium">
       <Body>
         <div className="topnav">
           <h1 className="ttl">Meus ganhos</h1>

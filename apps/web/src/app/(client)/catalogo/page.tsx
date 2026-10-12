@@ -47,7 +47,7 @@ function CatalogScreen() {
   const shown = svcList.slice(0, page * PER_PAGE);
 
   return (
-    <Screen>
+    <Screen size="wide">
       <Body>
         <div className="topnav">
           <h1 className="ttl">Catálogo</h1>
@@ -96,7 +96,7 @@ function CatalogScreen() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Reveal className="g2" deps={[cat, query, sort, page, svcList.length]}>
+            <Reveal className="gcards" deps={[cat, query, sort, page, svcList.length]}>
               {services.isLoading
                 ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-[210px]" />)
                 : shown.map((s) => <ServiceGridCard key={s.id} service={s} />)}
@@ -114,7 +114,7 @@ function CatalogScreen() {
             <Note icon="bag" dashed className="mb-3.5">
               Você retira os produtos no balcão da barbearia. Se comprar junto com um serviço, a balconista entrega no dia do atendimento.
             </Note>
-            <Reveal className="g2" deps={[cat, query, products.data?.length]}>
+            <Reveal className="gcards" deps={[cat, query, products.data?.length]}>
               {products.isLoading
                 ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-[230px]" />)
                 : (products.data ?? []).map((p) => <ProductGridCard key={p.id} product={p} />)}

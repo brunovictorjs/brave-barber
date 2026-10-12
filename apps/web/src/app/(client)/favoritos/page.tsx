@@ -27,7 +27,7 @@ export default function FavoritesPage() {
   const step = tab === 's' ? plural(services.length, 'serviço', 'serviços') : tab === 'r' ? plural(products.length, 'produto', 'produtos') : plural(barbers.length, 'profissional', 'profissionais');
 
   return (
-    <Screen>
+    <Screen size="medium">
       <RequireAuth>
         {() => (
           <Body>
@@ -44,7 +44,7 @@ export default function FavoritesPage() {
               </button>
             </div>
             {tab === 's' ? (
-              <Reveal className="stack" deps={[services.length]}>
+              <Reveal className="glist" deps={[services.length]}>
                 {services.map((s) => (
                   <ServiceRowCard
                     key={s.id}
@@ -63,7 +63,7 @@ export default function FavoritesPage() {
                 ) : null}
               </Reveal>
             ) : tab === 'r' ? (
-              <Reveal className="stack" deps={[products.length]}>
+              <Reveal className="glist" deps={[products.length]}>
                 {products.map((p) => (
                   <ProductRowCard key={p.id} product={p} />
                 ))}
@@ -74,7 +74,7 @@ export default function FavoritesPage() {
                 ) : null}
               </Reveal>
             ) : (
-              <Reveal className="stack" deps={[barbers.length]}>
+              <Reveal className="glist" deps={[barbers.length]}>
                 {barbers.map((b) => (
                   <div className="card flex items-center gap-3" key={b.id}>
                     <Avatar data={b.avatar} size={48} />

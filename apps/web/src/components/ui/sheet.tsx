@@ -28,13 +28,13 @@ export function SheetContent({
         className={cn(
           'fixed z-50 outline-none',
           side === 'bottom'
-            ? 'sheet-panel inset-x-0 bottom-0 mx-auto max-h-[92dvh] w-full max-w-[480px] overflow-y-auto data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:duration-300'
+            ? 'sheet-panel inset-x-0 bottom-0 mx-auto max-h-[92dvh] w-full max-w-[480px] overflow-y-auto md:top-0 md:my-auto md:h-fit md:max-w-[520px] md:rounded-[16px] md:border md:border-[var(--line-strong)] md:!pb-6 md:pt-6 data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:duration-300'
             : 'inset-y-0 left-0 w-[260px] overflow-y-auto border-r border-[var(--line)] bg-[#0e0e0e] p-3 data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left',
           className,
         )}
         {...props}
       >
-        {side === 'bottom' ? <div className="grab" /> : null}
+        {side === 'bottom' ? <div className="grab md:hidden" /> : null}
         {children}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>

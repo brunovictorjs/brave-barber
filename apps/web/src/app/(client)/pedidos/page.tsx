@@ -140,7 +140,7 @@ function OrdersScreen() {
           ))}
         </div>
       ) : (
-        <Reveal className="stack" deps={[tab, page, data?.items.length]}>
+        <Reveal className="glist" deps={[tab, page, data?.items.length]}>
           {data?.items.map((o) => <OrderCard key={o.id} o={o} />)}
           {data && !data.items.length ? (
             <Empty icon="cal" title={tab === 'upcoming' ? 'Nenhum horário marcado' : 'Nada no histórico ainda'}>
@@ -168,7 +168,7 @@ function OrdersScreen() {
 
 export default function OrdersPage() {
   return (
-    <Screen>
+    <Screen size="medium">
       <Suspense>
         <RequireAuth>{() => <OrdersScreen />}</RequireAuth>
       </Suspense>

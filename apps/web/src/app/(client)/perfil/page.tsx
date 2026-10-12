@@ -13,7 +13,7 @@ const fmt = (n: number) => String(n);
 export default function ProfilePage() {
   const logout = useLogout();
   return (
-    <Screen>
+    <Screen size="medium">
       <RequireAuth>
         {(me) => (
           <Body>

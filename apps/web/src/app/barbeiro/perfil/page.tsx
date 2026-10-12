@@ -32,7 +32,7 @@ export default function BarberProfilePage() {
   const max = Math.max(1, ...(data?.distribution.map((d) => d.count) ?? [1]));
 
   return (
-    <Screen>
+    <Screen size="medium">
       <Body>
         <div className="topnav">
           <h1 className="ttl">Minhas avaliações</h1>
