@@ -1,9 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { SettingsPage, useSettingsSection } from '@/components/admin/settings';
 import { Field, Input } from '@/components/ui/controls';
-import { api } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { api, errorMessage } from '@/lib/api';
 import { ago } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +41,23 @@ const CHANNELS: [Channel, string][] = [
 /** Notificações (tela 48): matriz de canais, remetente, lembretes e últimos envios. */
 export default function NotificationSettingsPage() {
   const { draft, update, dirty, save, updatedAt, loading } = useSettingsSection<NotificationSettings>('notifications');
-  const { data: log } = useQuery({ queryKey: ['email-log'], queryFn: () => api.get<{ id: string; event: string; to: string; subject: string; status: string; createdAt: string }[]>('/admin/notifications/log'), refetchInterval: 30_000 });
+  const qc = useQueryClient();
+  const { data: mail } = useQuery({
+    queryKey: ['email-log'],
+    queryFn: () =>
+      api.get<{ driver: 'log' | 'resend'; redirectTo: string | null; items: { id: string; event: string; to: string; subject: string; status: string; error: string | null; createdAt: string }[] }>('/admin/notifications/log'),
+    refetchInterval: 30_000,
+  });
+  const log = mail?.items;
+  const test = useMutation({
+    mutationFn: () => api.post<{ status: string; error: string | null; to: string }>('/admin/notifications/test'),
+    onSuccess: (r) => {
+      void qc.invalidateQueries({ queryKey: ['email-log'] });
+      if (r.status === 'SENT') toast.success(mail?.driver === 'resend' ? `E-mail de teste enviado para ${r.to}` : 'Teste registrado (driver log: nada foi enviado de verdade)');
+      else toast.error(r.error ?? 'O envio falhou');
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
 
   const flip = (e: EventKey, c: Channel) => update((d) => ({ ...d, matrix: { ...d.matrix, [e]: { ...d.matrix[e], [c]: !d.matrix[e][c] } } }));
   const reminder = (key: keyof NotificationSettings['reminders'], label: string, suffix: string) => (
@@ -125,14 +143,27 @@ export default function NotificationSettingsPage() {
               </div>
             </section>
             <section className="card">
-              <h2 className="s b mb-1.5 mt-0">Últimos envios</h2>
+              <div className="rowx mb-1.5">
+                <h2 className="s b m-0">Últimos envios</h2>
+                <span className="sp" />
+                <Button size="sm" variant="dark" onClick={() => test.mutate()} loading={test.isPending}>
+                  Enviar teste
+                </Button>
+              </div>
+              <p className="xs muted mb-1">
+                {mail?.driver === 'resend' ? 'Envio real pelo Resend' : 'Driver log: os e-mails só ficam registrados aqui, nada sai de verdade'}
+                {mail?.redirectTo ? ` · em teste, tudo vai para ${mail.redirectTo}` : ''}
+              </p>
               <div className="list">
                 {log?.map((l) => (
                   <div className="li !py-[9px]" key={l.id}>
                     <span className={l.status === 'SENT' ? 'badge ok dot' : l.status === 'FAILED' ? 'badge bad dot' : 'badge n dot'}>{l.status === 'SENT' ? 'Entregue' : l.status === 'FAILED' ? 'Falhou' : 'Ignorado'}</span>
                     <div className="min-w-0 flex-1">
                       <div className="s truncate">{l.subject}</div>
-                      <div className="xs muted mt-0.5 truncate">para {l.to}</div>
+                      <div className="xs muted mt-0.5 truncate" title={l.error ?? undefined}>
+                        para {l.to}
+                        {l.error ? ` · ${l.error}` : ''}
+                      </div>
                     </div>
                     <span className="xs muted">{ago(l.createdAt)}</span>
                   </div>

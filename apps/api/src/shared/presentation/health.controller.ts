@@ -19,6 +19,7 @@ export class HealthController {
       database: this.config.databaseProvider,
       payments: this.config.get('STRIPE_SECRET_KEY') ? 'stripe' : 'simulado',
       storage: this.config.get('STORAGE_DRIVER'),
+      mail: this.config.get('MAIL_DRIVER'),
     };
   }
 }

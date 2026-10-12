@@ -28,7 +28,11 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(''),
   SUPABASE_STORAGE_BUCKET: z.string().default('media'),
 
-  MAIL_DRIVER: z.enum(['log']).default('log'),
+  MAIL_DRIVER: z.enum(['log', 'resend']).default('log'),
+  RESEND_API_KEY: z.string().optional().default(''),
+  MAIL_FROM: z.string().default('Brave Barber <onboarding@resend.dev>'),
+  MAIL_REPLY_TO: z.string().optional().default(''),
+  MAIL_REDIRECT_TO: z.string().optional().default(''),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -45,6 +49,14 @@ export function validateEnv(raw: Record<string, unknown>): Env {
   }
   if (env.STORAGE_DRIVER === 'supabase' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
     throw new Error('STORAGE_DRIVER=supabase exige SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.');
+  }
+  if (env.MAIL_DRIVER === 'resend' && !env.RESEND_API_KEY) {
+    throw new Error('MAIL_DRIVER=resend exige RESEND_API_KEY.');
+  }
+  // Fora de produção, os e-mails reais vão todos para um endereço de teste:
+  // o seed tem endereços de clientes fictícios que podem existir de verdade.
+  if (env.MAIL_DRIVER === 'resend' && env.NODE_ENV !== 'production' && !env.MAIL_REDIRECT_TO) {
+    throw new Error('Em desenvolvimento, MAIL_DRIVER=resend exige MAIL_REDIRECT_TO (o e-mail que recebe todos os envios de teste).');
   }
   return env;
 }

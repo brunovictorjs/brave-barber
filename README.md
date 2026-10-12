@@ -38,6 +38,22 @@ npm run db:deploy  -w apps/api   # aplica no servidor
 
 O schema-fonte é `apps/api/prisma/schema.base.prisma`. O script `scripts/prisma-schema.mjs` gera o schema de cada provedor, e cada um mantém a própria pasta de migrações. As fotos vão para o Supabase Storage com `STORAGE_DRIVER=supabase`.
 
+## E-mails (Resend)
+
+Por padrão (`MAIL_DRIVER=log`) os e-mails só ficam registrados no console e em **Configurações › Notificações › Últimos envios**. Para enviar de verdade pelo [Resend](https://resend.com), em `apps/api/.env`:
+
+```env
+MAIL_DRIVER=resend
+RESEND_API_KEY=re_...            # chave com permissão de envio
+MAIL_FROM=Brave Barber <onboarding@resend.dev>
+MAIL_REDIRECT_TO=voce@exemplo.com  # obrigatório fora de produção
+```
+
+- **Em desenvolvimento**, `MAIL_REDIRECT_TO` desvia todos os envios para um endereço só (o seed tem e-mails de clientes fictícios que podem existir de verdade). O assunto mostra o destinatário original.
+- Com o remetente `onboarding@resend.dev`, o Resend só entrega para o e-mail da sua conta. **Em produção**, verifique o domínio da barbearia no Resend e use um remetente dele (ex.: `Brave Barber <contato@bravebarber.com.br>`), deixando `MAIL_REDIRECT_TO` vazio.
+- O botão **Enviar teste** em Configurações › Notificações manda um e-mail para quem está logado e mostra o resultado.
+- Se o Resend falhar, o pedido segue normalmente e o envio aparece como "Falhou", com o motivo.
+
 ## Arquitetura da API
 
 Cada contexto em `apps/api/src/modules/<contexto>` tem as camadas `domain` (agregados e regras), `application` (casos de uso e consultas), `infrastructure` (Prisma e gateways) e `presentation` (controllers). Os contextos são:

@@ -62,7 +62,29 @@ export class NotificationsService {
 
   async emailLog() {
     const rows = await this.prisma.emailLog.findMany({ orderBy: { createdAt: 'desc' }, take: 8 });
-    return rows.map((r) => ({ id: r.id, event: r.event, to: r.to, subject: r.subject, status: r.status, createdAt: r.createdAt.toISOString() }));
+    return {
+      driver: this.config.get('MAIL_DRIVER'),
+      redirectTo: this.config.get('MAIL_REDIRECT_TO') || null,
+      items: rows.map((r) => ({ id: r.id, event: r.event, to: r.to, subject: r.subject, status: r.status, error: r.error, createdAt: r.createdAt.toISOString() })),
+    };
+  }
+
+  /** "Enviar e-mail de teste" nas configurações: confere se o envio está funcionando. */
+  async sendTest(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    await this.mailer.send({
+      event: 'test',
+      to: [user.email],
+      subject: 'E-mail de teste',
+      lines: [
+        ['Enviado para', user.email],
+        ['Driver', this.config.get('MAIL_DRIVER') === 'resend' ? 'Resend' : 'Somente registro (log)'],
+        ['Quando', formatShortDateTime(this.clock.now(), this.config.timeZone)],
+      ],
+      cta: { label: 'Abrir o painel', url: `${this.config.get('WEB_URL')}/admin` },
+    });
+    const last = await this.prisma.emailLog.findFirst({ where: { event: 'test' }, orderBy: { createdAt: 'desc' } });
+    return { status: last?.status ?? 'SKIPPED', error: last?.error ?? null, to: last?.to ?? user.email };
   }
 
   private async push(userIds: (string | null | undefined)[], n: { type: string; tone: string; icon: string; title: string; body: string; link?: string }) {

@@ -78,4 +78,9 @@ export class AdminNotificationsController {
   log() {
     return this.notifications.emailLog();
   }
+
+  @Post('test')
+  test(@CurrentUser() actor: Actor) {
+    return this.notifications.sendTest(actor.id);
+  }
 }
