@@ -59,7 +59,9 @@ export default function AdminOrderPage({ params }: { params: Promise<{ code: str
 
   const since = o.customerStats?.since ? parts(o.customerStats.since) : null;
   const canRefund = o.refund.allowed && (!o.refund.outsideWindow || (o.refund.manualAllowed && isAdmin));
-  const pendingProducts = o.items.filter((i) => i.kind === 'PRODUCT' && !i.deliveredAt);
+  // Mesma regra do domínio: pedido cancelado (ou ainda sem confirmação) não tem o que entregar.
+  const canDeliver = !['CART', 'PENDING_PAYMENT', 'CANCELLED'].includes(o.status);
+  const pendingProducts = canDeliver ? o.items.filter((i) => i.kind === 'PRODUCT' && !i.deliveredAt) : [];
 
   return (
     <>
@@ -103,7 +105,7 @@ export default function AdminOrderPage({ params }: { params: Promise<{ code: str
                           {i.name}
                           {i.quantity > 1 ? ` × ${i.quantity}` : ''}
                           {i.addedDuringService ? <span className="xs muted"> · extra</span> : null}
-                          {i.kind === 'PRODUCT' ? <span className="xs muted"> · {i.deliveredAt ? 'entregue' : 'a entregar'}</span> : null}
+                          {i.kind === 'PRODUCT' ? <span className="xs muted"> · {i.deliveredAt ? 'entregue' : o.status === 'CANCELLED' ? 'não entregue' : 'a entregar'}</span> : null}
                         </td>
                         <td>{i.categoryName}</td>
                         <td className="r">{i.kind === 'SERVICE' ? duration(i.durationMin) : '—'}</td>
