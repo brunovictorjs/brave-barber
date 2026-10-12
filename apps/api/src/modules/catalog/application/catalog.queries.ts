@@ -293,7 +293,7 @@ export class CatalogQueries {
     });
   }
 
-  async publicProducts(opts: { category?: string; q?: string } = {}, userId?: string): Promise<ProductCard[]> {
+  async publicProducts(opts: { category?: string; q?: string; sort?: 'popular' | 'price' | 'new' } = {}, userId?: string): Promise<ProductCard[]> {
     const rows = await this.prisma.product.findMany({
       where: {
         sellOnline: true,
@@ -303,7 +303,21 @@ export class CatalogQueries {
       include: { category: true, media: { orderBy: { position: 'asc' } } },
       orderBy: [{ available: 'desc' }, { name: 'asc' }],
     });
-    return this.withProductStats(rows.map((r) => this.productCard(r)), userId);
+    // Mais procurados = unidades vendidas em pedidos pagos (site e balcão).
+    const sold = await this.prisma.orderItem.groupBy({
+      by: ['productId'],
+      where: { productId: { in: rows.map((r) => r.id) }, order: { status: { in: ['SCHEDULED', 'IN_SERVICE', 'COMPLETED'] } } },
+      _sum: { quantity: true },
+    });
+    const soldOf = new Map(sold.map((x) => [x.productId!, x._sum.quantity ?? 0]));
+    const by: Record<'popular' | 'price' | 'new', (a: (typeof rows)[number], b: (typeof rows)[number]) => number> = {
+      popular: (a, b) => (soldOf.get(b.id) ?? 0) - (soldOf.get(a.id) ?? 0) || a.name.localeCompare(b.name),
+      price: (a, b) => a.priceCents - b.priceCents || a.name.localeCompare(b.name),
+      new: (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    };
+    // Indisponíveis sempre no fim, em qualquer ordem.
+    const sorted = [...rows].sort((a, b) => Number(b.available) - Number(a.available) || by[opts.sort ?? 'popular'](a, b));
+    return this.withProductStats(sorted.map((r) => this.productCard(r)), userId);
   }
 
   productCard(r: Prisma.ProductGetPayload<{ include: { category: true; media: true } }>): ProductCard {

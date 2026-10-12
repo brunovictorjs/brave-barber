@@ -27,7 +27,7 @@ export const useServices = (q: { category?: string; q?: string; sort?: string } 
 export const useService = (slug: string) => useQuery({ queryKey: ['service', slug], queryFn: () => api.get<ServiceDetail>(`/catalog/services/${slug}`) });
 export const useProduct = (slug: string) => useQuery({ queryKey: ['product', slug], queryFn: () => api.get<ProductDetail>(`/catalog/products/${slug}`) });
 
-export const useProducts = (q: { category?: string; q?: string } = {}) =>
+export const useProducts = (q: { category?: string; q?: string; sort?: string } = {}) =>
   useQuery({ queryKey: ['products', q], queryFn: () => api.get<ProductCard[]>('/catalog/products', q), placeholderData: keepPreviousData });
 
 export const useCategories = (kind?: 'SERVICE' | 'PRODUCT') =>

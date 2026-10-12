@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useDeferredValue, useEffect, useState } from 'react';
+import { Suspense, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { Note } from '@/components/brand/brand';
 import { Icon } from '@/components/brand/icon';
 import { ProductGridCard, ServiceGridCard } from '@/components/client/cards';
@@ -14,7 +14,8 @@ import { plural } from '@/lib/format';
 import { useCategories, useProducts, useServices } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 
-const PER_PAGE = 8;
+/** Itens por página do catálogo (divide certinho nas grades de 2, 3 e 4 colunas). */
+const PER_PAGE = 12;
 const SORTS = { popular: 'Mais procurados', price: 'Menor preço', new: 'Novidades' } as const;
 
 function CatalogScreen() {
@@ -31,7 +32,7 @@ function CatalogScreen() {
   const { data: serviceCats } = useCategories('SERVICE');
   const { data: productCats } = useCategories('PRODUCT');
   const services = useServices({ category: tab === 'servicos' && cat !== 'all' ? cat : undefined, q: query || undefined, sort });
-  const products = useProducts({ category: tab === 'produtos' && cat !== 'all' ? cat : undefined, q: query || undefined });
+  const products = useProducts({ category: tab === 'produtos' && cat !== 'all' ? cat : undefined, q: query || undefined, sort });
 
   useEffect(() => setPage(1), [cat, query, sort, tab]);
 
@@ -43,8 +44,60 @@ function CatalogScreen() {
 
   const cats = (tab === 'servicos' ? serviceCats : productCats)?.filter((c) => c.count > 0) ?? [];
   const svcList = services.data ?? [];
-  const pages = Math.max(1, Math.ceil(svcList.length / PER_PAGE));
-  const shown = svcList.slice(0, page * PER_PAGE);
+  const prdList = products.data ?? [];
+  const total = tab === 'servicos' ? svcList.length : prdList.length;
+  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const from = (page - 1) * PER_PAGE;
+  const svcShown = svcList.slice(from, from + PER_PAGE);
+  const prdShown = prdList.slice(from, from + PER_PAGE);
+  const top = useRef<HTMLDivElement>(null);
+  const go = (p: number) => {
+    setPage(p);
+    top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Paginação: ‹ 1 2 3 › e "13–24 de 30".
+  const pager = total > PER_PAGE ? (
+    <>
+      <nav className="pager mt-[18px] justify-center" aria-label="Páginas do catálogo">
+        <button type="button" disabled={page <= 1} onClick={() => go(page - 1)} aria-label="Página anterior">
+          ‹
+        </button>
+        {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+          <button key={p} type="button" className={cn(p === page && 'on')} onClick={() => go(p)} aria-current={p === page ? 'page' : undefined}>
+            {p}
+          </button>
+        ))}
+        <button type="button" disabled={page >= pages} onClick={() => go(page + 1)} aria-label="Próxima página">
+          ›
+        </button>
+      </nav>
+      <p className="xs muted center mt-2">
+        {from + 1}–{Math.min(from + PER_PAGE, total)} de {total}
+      </p>
+    </>
+  ) : null;
+
+  // Contagem + ordenação (Mais procurados, Menor preço, Novidades), igual nas duas abas.
+  const sortRow = (count: string) => (
+    <div className="rowx xs muted mb-3">
+      <span>{count}</span>
+      <span className="sp" />
+      <DropdownMenu>
+        <DropdownMenuTrigger className="rowx xs cursor-pointer gap-[5px] border-0 bg-transparent p-0 text-[var(--ink-muted)]">
+          {SORTS[sort]} <Icon name="down" size="s" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((k) => (
+            <DropdownMenuItem key={k} onSelect={() => setSort(k)}>
+              {k === sort ? <Icon name="check" size="s" /> : <span className="w-4" />}
+              {SORTS[k]}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 
   return (
     <Screen size="wide">
@@ -79,47 +132,30 @@ function CatalogScreen() {
 
         {tab === 'servicos' ? (
           <>
-            <div className="rowx xs muted mb-3">
-              <span>{plural(svcList.length, 'serviço', 'serviços')}</span>
-              <span className="sp" />
-              <DropdownMenu>
-                <DropdownMenuTrigger className="rowx xs cursor-pointer gap-[5px] border-0 bg-transparent p-0 text-[var(--ink-muted)]">
-                  {SORTS[sort]} <Icon name="down" size="s" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((k) => (
-                    <DropdownMenuItem key={k} onSelect={() => setSort(k)}>
-                      {k === sort ? <Icon name="check" size="s" /> : <span className="w-4" />}
-                      {SORTS[k]}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <div ref={top} className="scroll-mt-20" />
+            {sortRow(plural(svcList.length, 'serviço', 'serviços'))}
             <Reveal className="gcards" deps={[cat, query, sort, page, svcList.length]}>
               {services.isLoading
                 ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-[210px]" />)
-                : shown.map((s) => <ServiceGridCard key={s.id} service={s} />)}
+                : svcShown.map((s) => <ServiceGridCard key={s.id} service={s} />)}
             </Reveal>
             {!services.isLoading && svcList.length === 0 ? <p className="xs muted center py-8">Nenhum serviço encontrado.</p> : null}
-            {page < pages ? (
-              <button type="button" className="btn ghost sm mx-auto mt-[18px] flex" onClick={() => setPage((p) => p + 1)}>
-                Carregar mais
-              </button>
-            ) : null}
-            {svcList.length ? <p className="xs muted center mt-3">{Math.min(page * PER_PAGE, svcList.length)} de {svcList.length} carregados</p> : null}
+            {pager}
           </>
         ) : (
           <>
             <Note icon="bag" dashed className="mb-3.5">
               Você retira os produtos no balcão da barbearia. Se comprar junto com um serviço, a balconista entrega no dia do atendimento.
             </Note>
-            <Reveal className="gcards" deps={[cat, query, products.data?.length]}>
+            <div ref={top} className="scroll-mt-20" />
+            {sortRow(plural(prdList.length, 'produto', 'produtos'))}
+            <Reveal className="gcards" deps={[cat, query, sort, page, prdList.length]}>
               {products.isLoading
                 ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-[230px]" />)
-                : (products.data ?? []).map((p) => <ProductGridCard key={p.id} product={p} />)}
+                : prdShown.map((p) => <ProductGridCard key={p.id} product={p} />)}
             </Reveal>
-            <p className="xs muted center mt-4">{plural(products.data?.length ?? 0, 'produto', 'produtos')}</p>
+            {!products.isLoading && !prdList.length ? <p className="xs muted center py-8">Nenhum produto encontrado.</p> : null}
+            {pager}
           </>
         )}
       </Body>
