@@ -14,7 +14,7 @@ npm run db:setup                          # cria o banco e roda o seed
 npm run dev                               # API em :3333 e site em :3000
 ```
 
-Sem `GOOGLE_CLIENT_ID`, a tela de login oferece "Entrar como" com os usuários do seed:
+Sem `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`, a tela de login oferece "Entrar como" com os usuários do seed:
 
 | Papel | E-mail |
 |---|---|

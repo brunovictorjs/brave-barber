@@ -34,9 +34,14 @@ declare global {
   interface Window {
     google?: {
       accounts: {
-        id: {
-          initialize: (opts: { client_id: string; callback: (r: { credential: string }) => void; ux_mode?: string }) => void;
-          renderButton: (el: HTMLElement, opts: Record<string, unknown>) => void;
+        oauth2: {
+          initCodeClient: (opts: {
+            client_id: string;
+            scope: string;
+            ux_mode: 'popup';
+            callback: (r: { code?: string; error?: string }) => void;
+            error_callback?: (e: { type: string }) => void;
+          }) => { requestCode: () => void };
         };
       };
     };
@@ -58,7 +63,7 @@ function LoginScreen() {
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
-  const googleBox = useRef<HTMLDivElement>(null);
+  const googleClient = useRef<{ requestCode: () => void } | null>(null);
   const [devOpen, setDevOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const { data: providers } = useQuery({ queryKey: ['auth-providers'], queryFn: () => api.get<Providers>('/auth/providers') });
@@ -74,14 +79,21 @@ function LoginScreen() {
     router.replace(!me.onboarded ? `/perfil/identidade${next ? `?next=${encodeURIComponent(next)}` : ''}` : next && next.startsWith('/') ? next : homeFor(me));
   }, [params, qc, router]);
 
+  // Popup do Google com o nosso próprio botão: o Google devolve um código que a API troca pelo ID token.
   const initGoogle = useCallback(() => {
-    if (!providers?.googleClientId || !window.google || !googleBox.current) return;
-    window.google.accounts.id.initialize({
+    if (!providers?.googleClientId || !window.google) return;
+    googleClient.current = window.google.accounts.oauth2.initCodeClient({
       client_id: providers.googleClientId,
-      callback: async ({ credential }) => {
+      scope: 'openid email profile',
+      ux_mode: 'popup',
+      callback: async ({ code, error }) => {
+        if (!code) {
+          if (error !== 'access_denied') toast.error('Não foi possível entrar com o Google. Tente de novo.');
+          return;
+        }
         setBusy(true);
         try {
-          await api.post('/auth/google', { credential });
+          await api.post('/auth/google', { code });
           await afterLogin();
         } catch (e) {
           toast.error(errorMessage(e));
@@ -89,16 +101,18 @@ function LoginScreen() {
           setBusy(false);
         }
       },
-    });
-    window.google.accounts.id.renderButton(googleBox.current, {
-      theme: 'outline',
-      size: 'large',
-      text: 'signin_with',
-      shape: 'rectangular',
-      width: Math.min(googleBox.current.offsetWidth || 340, 400),
-      locale: 'pt-BR',
+      error_callback: ({ type }) => {
+        if (type === 'popup_failed_to_open') toast.error('O navegador bloqueou a janela do Google. Libere os pop-ups deste site.');
+      },
     });
   }, [providers, afterLogin]);
+
+  const googleLogin = () => {
+    if (googleClient.current) googleClient.current.requestCode();
+    else if (providers?.google) toast.error('O Google ainda está carregando. Tente de novo em instantes.');
+    else if (providers?.dev) setDevOpen(true);
+    else toast.error('O login com Google ainda não foi configurado.');
+  };
 
   useEffect(() => {
     if (providers?.google && window.google) initGoogle();
@@ -133,19 +147,16 @@ function LoginScreen() {
         </h1>
         <p className="m muted mb-[26px] mt-3">Corte, barba e coloração com hora marcada. Escolhe o serviço, escolhe o horário, paga e aparece.</p>
         <div>
-          {providers?.google ? (
-            <div ref={googleBox} className="mb-2.5 flex min-h-[50px] w-full justify-center overflow-hidden rounded-[4px] bg-white" aria-busy={busy} />
-          ) : (
-            <button
-              type="button"
-              className="btn mb-2.5 !border-white !bg-white text-[15px] !normal-case !tracking-[.02em] !text-[#1f1f1f]"
-              onClick={() => (providers?.dev ? setDevOpen(true) : toast.error('O login com Google ainda não foi configurado.'))}
-              disabled={busy}
-            >
-              <GoogleMark />
-              Entrar com Google
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn mb-2.5 !border-white !bg-white text-[15px] !normal-case !tracking-[.02em] !text-[#1f1f1f]"
+            onClick={googleLogin}
+            disabled={busy}
+            aria-busy={busy}
+          >
+            <GoogleMark />
+            {busy ? 'Entrando…' : 'Entrar com Google'}
+          </button>
           {providers?.google && providers.dev ? (
             <button type="button" className="btn ghost sm mb-2.5 w-full" onClick={() => setDevOpen(true)}>
               Entrar como (desenvolvimento)

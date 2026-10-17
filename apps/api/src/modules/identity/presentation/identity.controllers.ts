@@ -46,8 +46,8 @@ export class AuthController {
   @Public()
   @Post('google')
   @HttpCode(200)
-  async google(@Body(new ZodPipe(z.object({ credential: z.string().min(10) }))) body: { credential: string }, @Res({ passthrough: true }) res: Response) {
-    const { token, isNew } = await this.auth.loginWithGoogle(body.credential);
+  async google(@Body(new ZodPipe(z.object({ code: z.string().min(10) }))) body: { code: string }, @Res({ passthrough: true }) res: Response) {
+    const { token, isNew } = await this.auth.loginWithGoogle(body.code);
     this.setCookie(res, token);
     return { ok: true, isNew };
   }

@@ -27,7 +27,9 @@ export class AuthService {
     private readonly config: AppConfig,
   ) {
     const clientId = config.get('GOOGLE_CLIENT_ID');
-    this.google = clientId ? new OAuth2Client(clientId) : null;
+    const clientSecret = config.get('GOOGLE_CLIENT_SECRET');
+    // 'postmessage' é o redirect_uri do fluxo de código em popup do Google Identity Services.
+    this.google = clientId && clientSecret ? new OAuth2Client(clientId, clientSecret, 'postmessage') : null;
   }
 
   get providers() {
@@ -40,12 +42,20 @@ export class AuthService {
     return this.jwt.signAsync({ sub: user.id, name: user.name, email: user.snapshot.email, roles: user.snapshot.roles });
   }
 
-  /** Recebe o ID token do Google Identity Services e entra (ou cria a conta). */
-  async loginWithGoogle(idToken: string): Promise<{ token: string; isNew: boolean }> {
+  /**
+   * Recebe o código de autorização do popup do Google, troca pelo ID token
+   * e entra (ou cria a conta).
+   */
+  async loginWithGoogle(code: string): Promise<{ token: string; isNew: boolean }> {
     if (!this.google) throw new DomainError('google_disabled', 'O login com Google não está configurado.');
-    const ticket = await this.google
-      .verifyIdToken({ idToken, audience: this.config.get('GOOGLE_CLIENT_ID') })
-      .catch(() => null);
+    const google = this.google;
+    const ticket = await google
+      .getToken(code)
+      .then(({ tokens }) => (tokens.id_token ? google.verifyIdToken({ idToken: tokens.id_token, audience: this.config.get('GOOGLE_CLIENT_ID') }) : null))
+      .catch((e: unknown) => {
+        this.logger.warn(`Falha ao trocar o código do Google: ${e instanceof Error ? e.message : String(e)}`);
+        return null;
+      });
     const payload = ticket?.getPayload();
     if (!payload?.email || !payload.email_verified) throw new DomainError('google_invalid', 'Não foi possível confirmar sua conta Google.', 'unauthorized');
 

@@ -18,6 +18,7 @@ const schema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET precisa ter pelo menos 16 caracteres'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
   DEV_LOGIN: bool,
 
   STRIPE_SECRET_KEY: z.string().optional().default(''),
