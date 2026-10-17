@@ -20,6 +20,9 @@ import { cn } from '@/lib/utils';
 
 type Method = 'PIX' | 'CREDIT' | 'DEBIT' | 'CASH';
 
+// Pix e cartão ficam ocultos enquanto o Stripe valida os documentos da barbearia. Volte para true quando a conta for liberada.
+const ONLINE_PAYMENTS_ENABLED = false;
+
 function PaymentChoice() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -58,7 +61,7 @@ function PaymentChoice() {
     { id: 'DEBIT', name: 'Cartão de débito', sub: 'Débito à vista', icon: 'card', cta: 'Continuar no débito' },
     { id: 'CASH', name: 'Dinheiro', sub: appointment ? 'Pague na barbearia, no balcão' : 'Pague na retirada, no balcão', icon: 'money', cta: appointment ? 'Agendar e pagar no balcão' : 'Reservar e pagar na retirada' },
   ];
-  const available = methods.filter((m) => options?.methods[m.id] ?? true);
+  const available = methods.filter((m) => (ONLINE_PAYMENTS_ENABLED || m.id === 'CASH') && (options?.methods[m.id] ?? true));
   const current = available.find((m) => m.id === method) ?? available[0];
 
   const go = () => {
