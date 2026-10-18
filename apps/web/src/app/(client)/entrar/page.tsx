@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -60,9 +60,7 @@ function GoogleMark() {
 }
 
 function LoginScreen() {
-  const router = useRouter();
   const params = useSearchParams();
-  const qc = useQueryClient();
   const googleClient = useRef<{ requestCode: () => void } | null>(null);
   const [devOpen, setDevOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -73,11 +71,11 @@ function LoginScreen() {
     const me = await api.get<Me>('/auth/me');
     // Entrar implica aceitar a versão vigente dos termos e da privacidade.
     if (me.pendingLegal.length) await api.post('/me/legal/accept');
-    qc.setQueryData(['me'], { ...me, pendingLegal: [] });
-    void qc.invalidateQueries();
     const next = params.get('next');
-    router.replace(!me.onboarded ? `/perfil/identidade${next ? `?next=${encodeURIComponent(next)}` : ''}` : next && next.startsWith('/') ? next : homeFor(me));
-  }, [params, qc, router]);
+    // Navegação completa: o cache do router guardou, de quando a pessoa era visitante, o
+    // redirecionamento do middleware para /entrar nas áreas protegidas (ex.: /perfil).
+    window.location.replace(!me.onboarded ? `/perfil/identidade${next ? `?next=${encodeURIComponent(next)}` : ''}` : next && next.startsWith('/') ? next : homeFor(me));
+  }, [params]);
 
   // Popup do Google com o nosso próprio botão: o Google devolve um código que a API troca pelo ID token.
   const initGoogle = useCallback(() => {
