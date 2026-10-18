@@ -27,12 +27,12 @@ export default function ProfilePage() {
             </div>
             <Reveal>
               <section className="card raised mb-[18px] flex items-center gap-[13px]">
-                <Avatar data={me.avatar} size={54} className="!text-[17px]" />
-                <div className="flex-1">
-                  <div className="b lg">{me.name}</div>
-                  <div className="xs muted mt-[3px]">{me.email}</div>
+                <Avatar data={me.avatar} size={54} className="shrink-0 !text-[17px]" />
+                <div className="min-w-0 flex-1">
+                  <div className="b lg truncate">{me.name}</div>
+                  <div className="xs muted mt-[3px] truncate" title={me.email}>{me.email}</div>
                 </div>
-                <Link className="btn sm dark" href="/perfil/identidade">
+                <Link className="btn sm dark shrink-0" href="/perfil/identidade">
                   Editar
                 </Link>
               </section>
