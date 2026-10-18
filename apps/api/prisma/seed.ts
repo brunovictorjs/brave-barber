@@ -89,16 +89,13 @@ async function main() {
   const admin = await mk('admin@bravebarber.com.br', 'Administração', 'Brave Barber', 'ADMIN');
   const breno = await mk('breno@bravebarber.com.br', 'Breno', 'Lima', 'BARBER,ADMIN', {
     about: 'Barbeiro há 11 anos, especialista em degradê e barba desenhada. Trabalho com navalha e acabamento na máquina zero.',
-    specialties: JSON.stringify(['Degradê', 'Barba', 'Navalha']),
   });
   const amanda = await mk('amanda@bravebarber.com.br', 'Amanda', 'Moreira', 'BARBER', {
     about: 'Trabalho com loiros desde 2016. Gosto de explicar cada etapa da descoloração para você saber exatamente o que está acontecendo no seu cabelo.',
-    specialties: JSON.stringify(['Platinado', 'Luzes', 'Matização']),
   });
-  const bruno = await mk('bruno@bravebarber.com.br', 'Bruno', 'Tavares', 'BARBER', { specialties: JSON.stringify(['Clássico', 'Infantil']) });
+  const bruno = await mk('bruno@bravebarber.com.br', 'Bruno', 'Tavares', 'BARBER');
   const fernanda = await mk('fernanda@bravebarber.com.br', 'Fernanda', 'Nunes', 'BARBER', {
     about: 'Barboterapia com toalha quente, óleo e massagem. Barba bem cuidada é ritual, não pressa.',
-    specialties: JSON.stringify(['Barboterapia', 'Navalha']),
   });
   const patricia = await mk('patricia@bravebarber.com.br', 'Patrícia', 'Lopes', 'RECEPTIONIST');
   await prisma.staffProfile.createMany({

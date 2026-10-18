@@ -95,15 +95,13 @@ export class UsersAdminService {
       ]);
       for (const r of rows) {
         const rating = ratings.find((x) => x.barberId === r.id)?._avg.barberRating;
-        const specialties = JSON.parse(r.specialties) as string[];
         extra.set(r.id, {
           served: served.find((x) => x.barberId === r.id)?._count ?? 0,
           rating: rating ? Math.round(rating * 10) / 10 : null,
           serviceBps: r.staffProfile?.serviceCommissionBps ?? null,
           productBps: r.staffProfile?.productCommissionBps ?? null,
           headline: r.staffProfile?.headline ?? '',
-          specialties,
-          profileStatus: !r.about ? 'missing_about' : specialties.length === 0 ? 'missing_specialties' : 'complete',
+          profileStatus: r.about ? 'complete' : 'missing_about',
         });
       }
     }

@@ -83,10 +83,10 @@ export class StorefrontService {
       this.prisma.review.aggregate({ _avg: { serviceRating: true }, _count: true }),
       this.catalog.categories('SERVICE'),
     ]);
-    const profiles = await this.prisma.user.findMany({ where: { id: { in: barbers.map((b) => b.id) } }, select: { id: true, about: true, specialties: true } });
+    const profiles = await this.prisma.user.findMany({ where: { id: { in: barbers.map((b) => b.id) } }, select: { id: true, about: true } });
     const team = barbers.filter((b) => {
       const p = profiles.find((x) => x.id === b.id);
-      return !!p?.about && (JSON.parse(p.specialties) as string[]).length > 0;
+      return !!p?.about;
     });
     const quick = categories
       .filter((c) => services.some((s) => s.categoryId === c.id))
@@ -134,7 +134,6 @@ export class StorefrontService {
       headline: user.staffProfile?.headline ?? '',
       sinceYear: user.staffProfile?.sinceYear ?? null,
       about: user.about,
-      specialties: JSON.parse(user.specialties) as string[],
       rating: { average: rating._avg.barberRating ? Math.round(rating._avg.barberRating * 10) / 10 : null, count: rating._count },
       completed,
       services: user.serviceSkills.filter((s) => s.service.status === 'ACTIVE').map((s) => ({ id: s.service.id, slug: s.service.slug, name: s.service.name })),

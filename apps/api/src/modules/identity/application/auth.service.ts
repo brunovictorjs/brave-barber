@@ -116,7 +116,6 @@ export class AuthService {
       name: fullName(row),
       phone: row.phone,
       about: row.about,
-      specialties: JSON.parse(row.specialties) as string[],
       avatar: avatarFor(row),
       roles,
       onboarded: !!row.onboardedAt,

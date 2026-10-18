@@ -16,7 +16,6 @@ export interface Me {
   name: string;
   phone: string | null;
   about: string | null;
-  specialties: string[];
   avatar: Avatar;
   roles: Role[];
   onboarded: boolean;
@@ -185,7 +184,6 @@ export interface BarberProfile {
   headline: string;
   sinceYear: number | null;
   about: string | null;
-  specialties: string[];
   rating: Rating;
   completed: number;
   services: { id: string; slug: string; name: string }[];

@@ -33,8 +33,7 @@ interface UserRow {
   serviceBps?: number;
   productBps?: number;
   headline?: string;
-  specialties?: string[];
-  profileStatus?: 'complete' | 'missing_about' | 'missing_specialties';
+  profileStatus?: 'complete' | 'missing_about';
   orders?: number;
   lateCount?: number;
   since?: string;
@@ -161,7 +160,6 @@ export default function UsersPage() {
                   <tr>
                     <th style={{ width: '28%' }}>Pessoa</th>
                     <th>Perfil público</th>
-                    <th>Especialidades</th>
                     <th className="r">Atend.</th>
                     <th className="r">Nota</th>
                     <th className="r">Comissão</th>
@@ -177,10 +175,9 @@ export default function UsersPage() {
                         {u.profileStatus === 'complete' ? (
                           <span className="badge ok dot">Completo</span>
                         ) : (
-                          <span className="badge warn dot">{u.profileStatus === 'missing_about' ? 'Sem "sobre mim"' : 'Sem especialidades'}</span>
+                          <span className="badge warn dot">Sem "sobre mim"</span>
                         )}
                       </td>
-                      <td>{u.specialties?.join(', ') || '—'}</td>
                       <td className="r">{u.served}</td>
                       <td className="r">{rating(u.rating)}</td>
                       <td className="r">
@@ -289,7 +286,7 @@ export default function UsersPage() {
             <div className="rowx items-start gap-2.5">
               <Icon name="alert" />
               <p className="xs muted leading-[1.65]">
-                A seção &quot;Quem vai te atender&quot; da landing usa foto, nome, &quot;sobre mim&quot; e especialidades destes cadastros. Quem está com <b className="text-[var(--ink)]">perfil incompleto</b> não aparece na vitrine. Os percentuais de comissão ficam em Configurações › Comissões.
+                A seção &quot;Quem vai te atender&quot; da landing usa foto, nome e &quot;sobre mim&quot; destes cadastros. Quem está com <b className="text-[var(--ink)]">perfil incompleto</b> não aparece na vitrine. Os percentuais de comissão ficam em Configurações › Comissões.
               </p>
             </div>
           </section>

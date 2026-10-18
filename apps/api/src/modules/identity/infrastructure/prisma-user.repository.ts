@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { User as UserRow } from '@prisma/client';
 import { parseRoles, serializeRoles } from '@/shared/domain/roles';
-import { parseJson, toJson } from '@/shared/infrastructure/json';
+import { parseJson } from '@/shared/infrastructure/json';
 import { PrismaService } from '@/shared/infrastructure/prisma/prisma.service';
 import { User } from '../domain/user';
 import { UserRepository } from '../domain/user.repository';
@@ -15,7 +15,6 @@ function toUser(row: UserRow): User {
     phone: row.phone,
     avatarUrl: row.avatarUrl,
     about: row.about,
-    specialties: parseJson<string[]>(row.specialties, []),
     roles: parseRoles(row.roles),
     active: row.active,
     onboardedAt: row.onboardedAt,
@@ -59,7 +58,6 @@ export class PrismaUserRepository extends UserRepository {
       phone: u.phone,
       avatarUrl: u.avatarUrl,
       about: u.about,
-      specialties: toJson(u.specialties),
       roles: serializeRoles(u.roles),
       active: u.active,
       onboardedAt: u.onboardedAt,

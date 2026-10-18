@@ -10,7 +10,6 @@ export interface UserProps {
   phone: string | null;
   avatarUrl: string | null;
   about: string | null;
-  specialties: string[];
   roles: Role[];
   active: boolean;
   onboardedAt: Date | null;
@@ -39,7 +38,6 @@ export class User extends AggregateRoot {
       phone: null,
       avatarUrl: input.avatarUrl ?? null,
       about: null,
-      specialties: [],
       roles: input.roles?.length ? input.roles : ['CLIENT'],
       active: true,
       onboardedAt: null,
@@ -82,12 +80,10 @@ export class User extends AggregateRoot {
     this.props.phone = phone;
   }
 
-  updateAbout(input: { about: string | null; specialties: string[] }): void {
+  updateAbout(input: { about: string | null }): void {
     const about = input.about?.trim() || null;
     invariant(!about || about.length <= 400, 'about_too_long', 'O texto "sobre mim" vai até 400 caracteres.');
-    invariant(input.specialties.length <= 8, 'too_many_specialties', 'Escolha até 8 especialidades.');
     this.props.about = about;
-    this.props.specialties = [...new Set(input.specialties.map((s) => s.trim()).filter(Boolean))];
   }
 
   setAvatar(url: string | null): void {
@@ -113,6 +109,6 @@ export class User extends AggregateRoot {
 
   /** Perfil público completo: entra na vitrine "Quem vai te atender". */
   get publicProfileComplete(): boolean {
-    return !!this.props.about && this.props.specialties.length > 0;
+    return !!this.props.about;
   }
 }

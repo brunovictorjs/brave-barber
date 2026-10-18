@@ -9,32 +9,30 @@ import { Body, Foot, Screen, TopNav } from '@/components/client/shell';
 import { Reveal } from '@/components/motion/motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/controls';
-import { api, errorMessage } from '@/lib/api';
+import { api, ApiError, errorMessage } from '@/lib/api';
 import { homeFor } from '@/lib/session';
 import type { Me } from '@/lib/types';
-import { cn } from '@/lib/utils';
-
-const SPECIALTIES = ['Degradê', 'Barba', 'Platinado', 'Navalha', 'Luzes', 'Infantil', 'Matização', 'Barboterapia', 'Clássico'];
 
 function AboutForm({ me }: { me: Me }) {
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
   const [about, setAbout] = useState(me.about ?? '');
-  const [specs, setSpecs] = useState<string[]>(me.specialties);
   const [saving, setSaving] = useState(false);
   const isStaff = me.roles.includes('BARBER');
 
   const finish = async (skip: boolean) => {
     setSaving(true);
     try {
-      const updated = await api.put<Me>('/me/about', skip ? { about: me.about, specialties: me.specialties, finish: true } : { about: about || null, specialties: specs, finish: true });
+      const updated = await api.put<Me>('/me/about', { about: skip ? me.about : about || null, finish: true });
       qc.setQueryData(['me'], updated);
       const next = params.get('next');
       router.replace(me.onboarded ? (isStaff ? '/barbeiro/perfil' : '/perfil') : next && next.startsWith('/') ? next : homeFor(updated));
       if (me.onboarded) toast.success('Perfil atualizado');
     } catch (e) {
-      toast.error(errorMessage(e));
+      // A tela não destaca campos: mostra o motivo do primeiro campo recusado.
+      const field = e instanceof ApiError && e.fields ? Object.values(e.fields)[0] : undefined;
+      toast.error(field ?? errorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -50,20 +48,9 @@ function AboutForm({ me }: { me: Me }) {
             <span>Sobre mim</span>
             <Textarea rows={5} className="min-h-[140px]" maxLength={400} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Conte um pouco sobre você" />
           </label>
-          <div className="rowx xs muted mb-[22px] justify-between">
+          <div className="rowx xs muted justify-between">
             <span>Aparece no seu perfil público</span>
             <span className="num">{about.length} / 400</span>
-          </div>
-          <h2 className="sec mt-0">Especialidades</h2>
-          <div className="flex flex-wrap gap-2">
-            {SPECIALTIES.map((s) => {
-              const on = specs.includes(s);
-              return (
-                <button key={s} type="button" className={cn('chip', on && 'on')} aria-pressed={on} onClick={() => setSpecs(on ? specs.filter((x) => x !== s) : [...specs, s])}>
-                  {s}
-                </button>
-              );
-            })}
           </div>
         </Reveal>
       </Body>

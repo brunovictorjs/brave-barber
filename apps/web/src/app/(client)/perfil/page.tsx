@@ -65,7 +65,7 @@ export default function ProfilePage() {
                   <Icon name="edit" />
                   <span className="flex-1">
                     <span className="s b block">Sobre você</span>
-                    <span className="xs muted">Texto e especialidades</span>
+                    <span className="xs muted">Texto de apresentação</span>
                   </span>
                   <Icon name="chev" size="s" className="muted" />
                 </Link>

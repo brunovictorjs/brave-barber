@@ -13,7 +13,6 @@ export const identityInput = z.object({
 
 export const aboutInput = z.object({
   about: z.string().max(400, 'Até 400 caracteres').nullable().default(null),
-  specialties: z.array(z.string().max(30)).max(8).default([]),
   finish: z.boolean().default(false),
 });
 

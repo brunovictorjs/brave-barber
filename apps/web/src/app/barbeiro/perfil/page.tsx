@@ -121,7 +121,7 @@ export default function BarberProfilePage() {
                 <Icon name="edit" />
                 <span className="flex-1">
                   <span className="s b block">Perfil público</span>
-                  <span className="xs muted">Texto e especialidades que aparecem na vitrine</span>
+                  <span className="xs muted">Texto que aparece na vitrine</span>
                 </span>
                 <Icon name="chev" size="s" className="muted" />
               </Link>
